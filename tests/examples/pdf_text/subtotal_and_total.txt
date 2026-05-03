@@ -1,0 +1,5 @@
+Invoice 2026-04
+
+Subtotal                                  EUR 100,00
+VAT 19%                                    EUR 19,00
+Grand Total                               EUR 119,00

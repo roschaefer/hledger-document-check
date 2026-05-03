@@ -1,0 +1,9 @@
+covers:
+  - date: 2026-01-01
+    account: Expenses:Insurance:Health:Base
+    amount: 100.00
+    currency: EUR
+  - date: 2026-01-01
+    account: Expenses:Insurance:Health:Nursing-care
+    amount: 30.00
+    currency: EUR

@@ -1,0 +1,17 @@
+[ledger]
+journal = "../journal.journal"
+
+[requirements]
+tag_prefixes = ["tax_"]
+
+[overdue]
+after_days = 14
+
+[checks]
+missing-document-coverage = "warn"
+unbooked-documents = "warn"
+amount-audit-skips = "warn"
+duplicate-files = "ignore"
+
+[enrich_journal]
+document_tag_root = "example/documents"

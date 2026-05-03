@@ -1,0 +1,92 @@
+include accounts.journal
+
+2026-01-01 Annual Health Insurance Base
+    Expenses:Insurance:Health:Base              100.00 EUR
+    Assets:Bank                                -100.00 EUR
+
+2026-01-01 Annual Nursing Care Insurance
+    Expenses:Insurance:Health:Nursing-care       30.00 EUR
+    Assets:Bank                                 -30.00 EUR
+
+2026-01-02 Hosting Provider
+    ; document:2026-01-02-hosting.document.yml
+    ; document:2026-01-02-existing.pdf
+    Expenses:Business:Hosting                    10.00 EUR
+    Assets:Bank                                 -10.00 EUR
+
+2026-01-03 Bank Fee
+    Expenses:Business:Banking                     3.00 EUR
+    Assets:Bank                                  -3.00 EUR
+
+2026-01-04 Cloud Provider
+    Expenses:Business:Cloud                      92.00 EUR
+    Assets:Bank                                 -92.00 EUR
+
+2026-01-05 Customer Payment Rate 1
+    Assets:Bank                                  60.00 EUR
+    Income:Business:Freelance:Customer
+
+2026-01-06 Tax-Demo Expense
+    Expenses:Tax-demo                            11.00 EUR  ; tax_role:business_expense
+    Assets:Bank                                 -11.00 EUR
+
+2026-01-10 Health Insurance Notice
+    Expenses:Insurance:Health:Provider          220.00 EUR
+    Liabilities:Insurance-notices              -220.00 EUR
+
+2026-01-15 Health Insurance Payment
+    Liabilities:Insurance-notices               220.00 EUR
+    Assets:Bank                                -220.00 EUR
+
+2026-02-05 Customer Payment Rate 2
+    Assets:Bank                                  40.00 EUR
+    Income:Business:Freelance:Customer
+
+2026-02-10 Pension Insurance Notice
+    Expenses:Insurance:Pension:Provider          80.00 EUR
+    Liabilities:Insurance-notices               -80.00 EUR
+
+2026-03-01 Domain A
+    Expenses:Business:Domains                     4.00 EUR
+    Assets:Bank                                  -4.00 EUR
+
+2026-03-01 Domain B
+    Expenses:Business:Domains                     6.00 EUR
+    Assets:Bank                                  -6.00 EUR
+
+2026-03-10 Customer Batch Payment
+    Assets:Bank                                 100.00 EUR
+    Income:Business:Freelance:Customer
+
+2026-04-01 Software Suite
+    Expenses:Business:Software                   92.00 EUR
+    Assets:Bank                                 -92.00 EUR
+
+2026-04-10 AWS Invoice
+    Expenses:Business:Hosting:Aws                12.34 EUR
+    Assets:Bank                                 -12.34 EUR
+
+2026-04-20 Customer Payment
+    Assets:Bank                                 100.00 EUR
+    Income:Business:Freelance:Customer
+
+2026-05-02 Unreadable Document Amount
+    Expenses:Business:Unreadable-document        10.00 EUR
+    Assets:Bank                                 -10.00 EUR
+
+2026-05-03 Unclear Document Currency
+    Expenses:Business:Unclear-document-currency  10.00 EUR
+    Assets:Bank                                 -10.00 EUR
+
+2026-05-04 Missing Transaction Amount
+    Expenses:Business:Missing-transaction-amount
+
+2026-05-05 Mixed Transaction Currencies
+    Expenses:Business:Mixed-transaction-currencies  10.00 EUR
+    Assets:Bank                                    -10.00 EUR
+    Expenses:Business:Mixed-transaction-currencies  12.00 USD
+    Assets:Paypal                                  -12.00 USD
+
+2026-05-06 Currency Mismatch
+    Expenses:Business:Currency-mismatch          10.00 EUR
+    Assets:Bank                                 -10.00 EUR

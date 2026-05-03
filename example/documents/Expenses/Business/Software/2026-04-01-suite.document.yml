@@ -1,0 +1,8 @@
+amount: 92.00
+currency: EUR
+description: Software Suite
+notes:
+  reason: "Bank converted the foreign-currency charge"
+  source_lines:
+    - "invoice total: 100.00 USD"
+    - "charged amount: 92.00 EUR"

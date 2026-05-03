@@ -1,0 +1,6 @@
+Invoice QTR1CY1D-0001
+Statement date: March 10, 2026
+
+Subtotal                                  $10.00
+Tax                                        $1.90
+Amount due                                $11.90

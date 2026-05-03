@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: hledger-document-check-linux-x86_64
+          - os: macos-latest
+            asset_name: hledger-document-check-macos-arm64
+    runs-on: ${{ matrix.os }}
+    env:
+      HLEDGER_VERSION: "1.52.1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Set up just
+        uses: extractions/setup-just@v3
+
+      - name: Install hledger
+        if: runner.os == 'Linux'
+        run: |
+          curl -fL "https://github.com/simonmichael/hledger/releases/download/${HLEDGER_VERSION}/hledger-linux-x64.tar.gz" \
+            | sudo tar -xz -f- -C /usr/local/bin hledger
+          hledger --version
+
+      - name: Install hledger
+        if: runner.os == 'macOS'
+        run: |
+          brew install hledger
+          hledger --version
+
+      - name: Install fava
+        run: pip install fava
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Run checks
+        run: just check
+
+      - name: Copy release binary
+        run: cp target/release/hledger-document-check ${{ matrix.asset_name }}
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+
+  release:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Get short commit hash
+        id: commit
+        run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Update latest release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHORT_SHA: ${{ steps.commit.outputs.short }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          git tag -f latest
+          git push origin latest --force
+          gh release create latest \
+            --title "Latest (rolling)" \
+            --notes "Built from commit ${SHORT_SHA} (${GITHUB_SHA})" \
+            --prerelease \
+            dist/hledger-document-check-linux-x86_64 \
+            dist/hledger-document-check-macos-arm64

@@ -1,0 +1,10 @@
+amount: 100.00
+currency: EUR
+
+covers:
+  - date: 2026-01-05
+    account: Income:Business:Freelance:Customer
+    amount: 60.00
+  - date: 2026-02-05
+    account: Income:Business:Freelance:Customer
+    amount: 40.00
