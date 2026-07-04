@@ -123,12 +123,16 @@ fn run(cli: Cli) -> i32 {
             today,
             overdue_after_days,
         } => {
-            let documents_str = documents.as_ref().and_then(|p| p.to_str()).map(|s| s.to_string());
-            let config_str = config_path.as_ref().and_then(|p| p.to_str()).map(|s| s.to_string());
-            let config_file = config::discover_config_path(
-                documents_str.as_deref(),
-                config_str.as_deref(),
-            );
+            let documents_str = documents
+                .as_ref()
+                .and_then(|p| p.to_str())
+                .map(|s| s.to_string());
+            let config_str = config_path
+                .as_ref()
+                .and_then(|p| p.to_str())
+                .map(|s| s.to_string());
+            let config_file =
+                config::discover_config_path(documents_str.as_deref(), config_str.as_deref());
             let cfg = match config::load_config(config_file.as_deref()) {
                 Ok(c) => c,
                 Err(e) => {
@@ -142,8 +146,7 @@ fn run(cli: Cli) -> i32 {
                 .or_else(|| cfg.documents.as_ref().map(PathBuf::from))
                 .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
-            let effective_journal = journal
-                .or_else(|| cfg.journal.as_ref().map(PathBuf::from));
+            let effective_journal = journal.or_else(|| cfg.journal.as_ref().map(PathBuf::from));
 
             let effective_prefixes = if require_document_for_tag_prefixes.is_empty() {
                 cfg.tag_prefixes.clone()
@@ -190,9 +193,7 @@ fn run(cli: Cli) -> i32 {
                 return 2;
             }
 
-            let effective_overdue = overdue_after_days
-                .or(cfg.overdue_after_days)
-                .unwrap_or(14);
+            let effective_overdue = overdue_after_days.or(cfg.overdue_after_days).unwrap_or(14);
 
             check_documents::run_check(check_documents::CheckArgs {
                 journal: effective_journal,
@@ -216,12 +217,16 @@ fn run(cli: Cli) -> i32 {
             warn_on: _,
             ignore_checks: _,
         } => {
-            let documents_str = documents.as_ref().and_then(|p| p.to_str()).map(|s| s.to_string());
-            let config_str = config_path.as_ref().and_then(|p| p.to_str()).map(|s| s.to_string());
-            let config_file = config::discover_config_path(
-                documents_str.as_deref(),
-                config_str.as_deref(),
-            );
+            let documents_str = documents
+                .as_ref()
+                .and_then(|p| p.to_str())
+                .map(|s| s.to_string());
+            let config_str = config_path
+                .as_ref()
+                .and_then(|p| p.to_str())
+                .map(|s| s.to_string());
+            let config_file =
+                config::discover_config_path(documents_str.as_deref(), config_str.as_deref());
             let cfg = match config::load_config(config_file.as_deref()) {
                 Ok(c) => c,
                 Err(e) => {
@@ -235,8 +240,7 @@ fn run(cli: Cli) -> i32 {
                 .or_else(|| cfg.documents.as_ref().map(PathBuf::from))
                 .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
-            let effective_journal = journal
-                .or_else(|| cfg.journal.as_ref().map(PathBuf::from));
+            let effective_journal = journal.or_else(|| cfg.journal.as_ref().map(PathBuf::from));
 
             let effective_tag_root = document_tag_root.or(cfg.document_tag_root);
 

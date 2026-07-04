@@ -7,7 +7,9 @@ use crate::document_paths::{
     parse_document_filename, parse_metadata_filename,
 };
 use crate::metadata::metadata_for_document;
-use crate::model::{DocumentEntry, DocumentKind, DocumentTree, TreeIssue, CONFIG_FILENAME, METADATA_SUFFIX};
+use crate::model::{
+    DocumentEntry, DocumentKind, DocumentTree, TreeIssue, CONFIG_FILENAME, METADATA_SUFFIX,
+};
 
 pub fn scan_document_tree(root: &Path) -> DocumentTree {
     let root = match root.canonicalize() {
@@ -33,7 +35,10 @@ pub fn scan_document_tree(root: &Path) -> DocumentTree {
                 }
             }
             Err(e) => {
-                let path = e.path().map(|p| p.to_path_buf()).unwrap_or_else(|| root.clone());
+                let path = e
+                    .path()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| root.clone());
                 issues.push(TreeIssue {
                     path,
                     reason: format!("cannot read: {e}"),
@@ -66,7 +71,11 @@ pub fn scan_document_tree(root: &Path) -> DocumentTree {
                         .map(|e| e == "pdf")
                         .unwrap_or(false)
             })
-            .filter_map(|p| p.file_stem().and_then(|s| s.to_str()).map(|s| s.to_string()))
+            .filter_map(|p| {
+                p.file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string())
+            })
             .collect();
 
         for child in children {
@@ -151,10 +160,7 @@ pub fn scan_document_tree(root: &Path) -> DocumentTree {
                 continue;
             }
 
-            let account_path = account_path_from_dir(
-                path.parent().unwrap_or(&root),
-                &root,
-            );
+            let account_path = account_path_from_dir(path.parent().unwrap_or(&root), &root);
             let (_, rest_name) = parse_metadata_filename(path);
             matched_entries.push(DocumentEntry {
                 path: path.clone(),
@@ -169,30 +175,26 @@ pub fn scan_document_tree(root: &Path) -> DocumentTree {
         // Handle PDF files
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         if ext == "pdf" {
-            let account_path = account_path_from_dir(
-                &account_dir_for_document(path),
-                &root,
-            );
+            let account_path = account_path_from_dir(&account_dir_for_document(path), &root);
 
             let metadata_path = metadata_path_for_document(path);
-            let has_valid_metadata = if metadata_path.exists()
-                && !invalid_metadata_paths.contains(&metadata_path)
-            {
-                match metadata_for_document(path) {
-                    Ok(Some(_)) => true,
-                    Ok(None) => false,
-                    Err(e) => {
-                        invalid_metadata_paths.insert(metadata_path.clone());
-                        issues.push(TreeIssue {
-                            path: metadata_path.clone(),
-                            reason: format!("invalid metadata: {e}"),
-                        });
-                        false
+            let has_valid_metadata =
+                if metadata_path.exists() && !invalid_metadata_paths.contains(&metadata_path) {
+                    match metadata_for_document(path) {
+                        Ok(Some(_)) => true,
+                        Ok(None) => false,
+                        Err(e) => {
+                            invalid_metadata_paths.insert(metadata_path.clone());
+                            issues.push(TreeIssue {
+                                path: metadata_path.clone(),
+                                reason: format!("invalid metadata: {e}"),
+                            });
+                            false
+                        }
                     }
-                }
-            } else {
-                false
-            };
+                } else {
+                    false
+                };
 
             let (match_date, rest_name) = parse_document_filename(path);
 
@@ -256,7 +258,10 @@ pub fn scan_document_tree(root: &Path) -> DocumentTree {
         if in_support_tree(support_dir, &support_dirs) {
             continue;
         }
-        let name = support_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let name = support_dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
         let pdf = support_dir.with_file_name(format!("{name}.pdf"));
         if !pdf.exists() {
             issues.push(TreeIssue {
@@ -303,7 +308,11 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path().join("expenses/business/hosting/uberspace");
         std::fs::create_dir_all(&dir).unwrap();
-        write(&dir, "2025-02-18-missing-rfmb.document.yml", b"covers: []\n");
+        write(
+            &dir,
+            "2025-02-18-missing-rfmb.document.yml",
+            b"covers: []\n",
+        );
 
         let tree = scan_document_tree(tmp.path());
 
@@ -360,11 +369,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path().join("expenses/phone/service");
         std::fs::create_dir_all(&dir).unwrap();
-        write(
-            &dir,
-            "2026-06-22-rechnung-FM.F26018179745.pdf",
-            b"pdf",
-        );
+        write(&dir, "2026-06-22-rechnung-FM.F26018179745.pdf", b"pdf");
         std::fs::create_dir_all(dir.join("2026-06-22-rechnung-FM.F26018179745")).unwrap();
 
         let tree = scan_document_tree(tmp.path());
@@ -385,7 +390,11 @@ mod tests {
         let dir = tmp.path().join("expenses/business/software");
         std::fs::create_dir_all(&dir).unwrap();
         write(&dir, "2026-01-01-suite.pdf", b"pdf");
-        let meta = write(&dir, "2026-01-01-suite.document.yml", b"covers:\n  - amount:\n      nested: value\n");
+        let meta = write(
+            &dir,
+            "2026-01-01-suite.document.yml",
+            b"covers:\n  - amount:\n      nested: value\n",
+        );
 
         let tree = scan_document_tree(tmp.path());
 

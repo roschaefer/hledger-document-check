@@ -11,6 +11,8 @@ use crate::model::{
 };
 
 type GroupKey = (String, NaiveDate);
+/// metadata_amounts[(file, group)] = Vec<(amount, currency)>
+type MetadataAmounts = HashMap<(PathBuf, GroupKey), Vec<(f64, Option<String>)>>;
 
 pub fn find_amount_mismatches(
     required_groups: &HashMap<GroupKey, Vec<RequiredDocument>>,
@@ -18,9 +20,7 @@ pub fn find_amount_mismatches(
 ) -> AmountAudit {
     let mut file_to_groups: HashMap<PathBuf, HashSet<GroupKey>> = HashMap::new();
     let mut group_to_files: HashMap<GroupKey, HashSet<PathBuf>> = HashMap::new();
-    // metadata_amounts[(file, group)] = Vec<(amount, currency)>
-    let mut metadata_amounts: HashMap<(PathBuf, GroupKey), Vec<(f64, Option<String>)>> =
-        HashMap::new();
+    let mut metadata_amounts: MetadataAmounts = HashMap::new();
     // metadata_document_totals[file] = Set<(amount, currency)>
     let mut metadata_document_totals: HashMap<PathBuf, HashSet<(u64, Option<String>)>> =
         HashMap::new(); // store f64 as bits
@@ -38,7 +38,10 @@ pub fn find_amount_mismatches(
             continue;
         }
 
-        let real_path = entry.path.canonicalize().unwrap_or_else(|_| entry.path.clone());
+        let real_path = entry
+            .path
+            .canonicalize()
+            .unwrap_or_else(|_| entry.path.clone());
         file_kinds
             .entry(real_path.clone())
             .or_default()
@@ -172,9 +175,9 @@ pub fn find_amount_mismatches(
         let metadata_group_keys: HashSet<GroupKey> = component_files
             .iter()
             .flat_map(|fp| {
-                component_groups.iter().filter(|gk| {
-                    metadata_amounts.contains_key(&(fp.clone(), (*gk).clone()))
-                })
+                component_groups
+                    .iter()
+                    .filter(|gk| metadata_amounts.contains_key(&(fp.clone(), (*gk).clone())))
             })
             .cloned()
             .collect();
@@ -184,7 +187,8 @@ pub fn find_amount_mismatches(
 
         let (document_amounts, pdf_currencies): (Vec<f64>, HashSet<String>) =
             if using_metadata_amounts {
-                let amounts: Vec<f64> = metadata_component_amounts.iter().map(|(a, _)| *a).collect();
+                let amounts: Vec<f64> =
+                    metadata_component_amounts.iter().map(|(a, _)| *a).collect();
                 let currencies: HashSet<String> = metadata_component_amounts
                     .iter()
                     .filter_map(|(_, c)| c.clone())
@@ -425,8 +429,14 @@ mod tests {
         let gk1 = group_key("expenses/business/hosting/aws", nd(2026, 1, 1));
         let gk2 = group_key("expenses/business/hosting/aws", nd(2026, 2, 1));
         let required_groups = HashMap::from([
-            (gk1.clone(), vec![make_required(ACCOUNT, nd(2026, 1, 1), 60.0)]),
-            (gk2.clone(), vec![make_required(ACCOUNT, nd(2026, 2, 1), 40.0)]),
+            (
+                gk1.clone(),
+                vec![make_required(ACCOUNT, nd(2026, 1, 1), 60.0)],
+            ),
+            (
+                gk2.clone(),
+                vec![make_required(ACCOUNT, nd(2026, 2, 1), 40.0)],
+            ),
         ]);
         let entries = vec![make_entry(invoice, ACCOUNT, nd(2026, 1, 1))];
         let audit = find_amount_mismatches(&required_groups, &entries);
@@ -443,11 +453,15 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let invoice = dir.join("2026-01-01-invoice57.pdf");
         std::fs::write(&invoice, b"pdf").unwrap();
-        std::fs::write(dir.join("2026-01-01-invoice57.document.yml"),
-            "amount: 100.00\ncurrency: EUR\n").unwrap();
+        std::fs::write(
+            dir.join("2026-01-01-invoice57.document.yml"),
+            "amount: 100.00\ncurrency: EUR\n",
+        )
+        .unwrap();
 
         let gk = group_key("expenses/business/hosting/aws", nd(2026, 1, 1));
-        let required_groups = HashMap::from([(gk, vec![make_required(ACCOUNT, nd(2026, 1, 1), 100.0)])]);
+        let required_groups =
+            HashMap::from([(gk, vec![make_required(ACCOUNT, nd(2026, 1, 1), 100.0)])]);
         let entries = vec![make_entry(invoice, ACCOUNT, nd(2026, 1, 1))];
         let audit = find_amount_mismatches(&required_groups, &entries);
 
@@ -464,14 +478,37 @@ mod tests {
         let invoice_b = dir.join("2026-01-15-invoice58.pdf");
         std::fs::write(&invoice_a, b"pdf-a").unwrap();
         std::fs::write(&invoice_b, b"pdf-b").unwrap();
-        std::fs::write(dir.join("2026-01-15-invoice57.document.yml"), "amount: 30.00\ncurrency: EUR\n").unwrap();
-        std::fs::write(dir.join("2026-01-15-invoice58.document.yml"), "amount: 70.00\ncurrency: EUR\n").unwrap();
+        std::fs::write(
+            dir.join("2026-01-15-invoice57.document.yml"),
+            "amount: 30.00\ncurrency: EUR\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("2026-01-15-invoice58.document.yml"),
+            "amount: 70.00\ncurrency: EUR\n",
+        )
+        .unwrap();
 
         let gk = group_key("income/business/freelance/customer", nd(2026, 1, 15));
-        let required_groups = HashMap::from([(gk, vec![make_required("income:business:freelance:customer", nd(2026, 1, 15), 100.0)])]);
+        let required_groups = HashMap::from([(
+            gk,
+            vec![make_required(
+                "income:business:freelance:customer",
+                nd(2026, 1, 15),
+                100.0,
+            )],
+        )]);
         let entries = vec![
-            make_entry(invoice_a, "income:business:freelance:customer", nd(2026, 1, 15)),
-            make_entry(invoice_b, "income:business:freelance:customer", nd(2026, 1, 15)),
+            make_entry(
+                invoice_a,
+                "income:business:freelance:customer",
+                nd(2026, 1, 15),
+            ),
+            make_entry(
+                invoice_b,
+                "income:business:freelance:customer",
+                nd(2026, 1, 15),
+            ),
         ];
         let audit = find_amount_mismatches(&required_groups, &entries);
 
@@ -485,11 +522,15 @@ mod tests {
         let dir = tmp.path().join("expenses/business/hosting/aws");
         std::fs::create_dir_all(&dir).unwrap();
         let placeholder = dir.join("2026-01-01-missing.document.yml");
-        std::fs::write(&placeholder,
-            "covers:\n  - date: 2026-01-01\n    account: expenses:business:hosting:aws\n").unwrap();
+        std::fs::write(
+            &placeholder,
+            "covers:\n  - date: 2026-01-01\n    account: expenses:business:hosting:aws\n",
+        )
+        .unwrap();
 
         let gk = group_key("expenses/business/hosting/aws", nd(2026, 1, 1));
-        let required_groups = HashMap::from([(gk, vec![make_required(ACCOUNT, nd(2026, 1, 1), 100.0)])]);
+        let required_groups =
+            HashMap::from([(gk, vec![make_required(ACCOUNT, nd(2026, 1, 1), 100.0)])]);
         let entries = vec![DocumentEntry {
             path: placeholder,
             account_path: ACCOUNT.split(':').collect(),
@@ -515,8 +556,14 @@ mod tests {
             "covers:\n  - date: 2026-01-01\n    account: expenses:business:hosting:aws\n    amount: 100.00\n    currency: EUR\n  - date: 2026-02-01\n    account: expenses:business:hosting:aws\n    amount: 0.00\n    currency: EUR\n").unwrap();
 
         let required_groups = HashMap::from([
-            (group_key("expenses/business/hosting/aws", nd(2026, 1, 1)), vec![make_required(ACCOUNT, nd(2026, 1, 1), 30.0)]),
-            (group_key("expenses/business/hosting/aws", nd(2026, 2, 1)), vec![make_required(ACCOUNT, nd(2026, 2, 1), 40.0)]),
+            (
+                group_key("expenses/business/hosting/aws", nd(2026, 1, 1)),
+                vec![make_required(ACCOUNT, nd(2026, 1, 1), 30.0)],
+            ),
+            (
+                group_key("expenses/business/hosting/aws", nd(2026, 2, 1)),
+                vec![make_required(ACCOUNT, nd(2026, 2, 1), 40.0)],
+            ),
         ]);
         let entries = vec![make_entry(invoice, ACCOUNT, nd(2026, 1, 1))];
         let audit = find_amount_mismatches(&required_groups, &entries);
@@ -533,7 +580,11 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let invoice = dir.join("2026-01-01-invoice57.pdf");
         std::fs::write(&invoice, b"pdf").unwrap();
-        std::fs::write(dir.join("2026-01-01-invoice57.document.yml"), "amount: 0.00\ncurrency: USD\n").unwrap();
+        std::fs::write(
+            dir.join("2026-01-01-invoice57.document.yml"),
+            "amount: 0.00\ncurrency: USD\n",
+        )
+        .unwrap();
 
         let required_groups = HashMap::from([(
             group_key("expenses/business/education/vuemastery", nd(2026, 1, 1)),
@@ -548,7 +599,11 @@ mod tests {
                 transaction_index: 1,
             }],
         )]);
-        let entries = vec![make_entry(invoice, "expenses:business:education:vuemastery", nd(2026, 1, 1))];
+        let entries = vec![make_entry(
+            invoice,
+            "expenses:business:education:vuemastery",
+            nd(2026, 1, 1),
+        )];
         let audit = find_amount_mismatches(&required_groups, &entries);
 
         assert_eq!(audit.checked_groups, 1);
@@ -565,10 +620,15 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let invoice = dir.join("2026-01-01-invoice57.pdf");
         std::fs::write(&invoice, b"pdf").unwrap();
-        std::fs::write(dir.join("2026-01-01-invoice57.document.yml"), "amount: 100.00\ncurrency: USD\n").unwrap();
+        std::fs::write(
+            dir.join("2026-01-01-invoice57.document.yml"),
+            "amount: 100.00\ncurrency: USD\n",
+        )
+        .unwrap();
 
         let gk = group_key("expenses/business/hosting/aws", nd(2026, 1, 1));
-        let required_groups = HashMap::from([(gk, vec![make_required(ACCOUNT, nd(2026, 1, 1), 100.0)])]);
+        let required_groups =
+            HashMap::from([(gk, vec![make_required(ACCOUNT, nd(2026, 1, 1), 100.0)])]);
         let entries = vec![make_entry(invoice, ACCOUNT, nd(2026, 1, 1))];
         let audit = find_amount_mismatches(&required_groups, &entries);
 
@@ -589,12 +649,28 @@ mod tests {
             "covers:\n  - date: 2025-01-01\n    account: liabilities:health-insurance:2023\n    amount: 40.00\n    currency: EUR\n  - date: 2025-01-01\n    account: liabilities:health-insurance:2024\n    amount: 60.00\n    currency: EUR\n").unwrap();
 
         let required_groups = HashMap::from([
-            (group_key("liabilities/health-insurance/2023", nd(2025, 1, 1)),
-                vec![make_required("liabilities:health-insurance:2023", nd(2025, 1, 1), 40.0)]),
-            (group_key("liabilities/health-insurance/2024", nd(2025, 1, 1)),
-                vec![make_required("liabilities:health-insurance:2024", nd(2025, 1, 1), 60.0)]),
+            (
+                group_key("liabilities/health-insurance/2023", nd(2025, 1, 1)),
+                vec![make_required(
+                    "liabilities:health-insurance:2023",
+                    nd(2025, 1, 1),
+                    40.0,
+                )],
+            ),
+            (
+                group_key("liabilities/health-insurance/2024", nd(2025, 1, 1)),
+                vec![make_required(
+                    "liabilities:health-insurance:2024",
+                    nd(2025, 1, 1),
+                    60.0,
+                )],
+            ),
         ]);
-        let entries = vec![make_entry(invoice, "liabilities:health-insurance", nd(2025, 1, 1))];
+        let entries = vec![make_entry(
+            invoice,
+            "liabilities:health-insurance",
+            nd(2025, 1, 1),
+        )];
         let audit = find_amount_mismatches(&required_groups, &entries);
 
         assert!(audit.mismatches.is_empty());
@@ -612,8 +688,14 @@ mod tests {
             "amount: 100.00\ncurrency: EUR\ncovers:\n  - date: 2026-01-01\n    account: expenses:business:hosting:aws\n    amount: 60.00\n  - date: 2026-02-01\n    account: expenses:business:hosting:aws\n    amount: 30.00\n").unwrap();
 
         let required_groups = HashMap::from([
-            (group_key("expenses/business/hosting/aws", nd(2026, 1, 1)), vec![make_required(ACCOUNT, nd(2026, 1, 1), 60.0)]),
-            (group_key("expenses/business/hosting/aws", nd(2026, 2, 1)), vec![make_required(ACCOUNT, nd(2026, 2, 1), 30.0)]),
+            (
+                group_key("expenses/business/hosting/aws", nd(2026, 1, 1)),
+                vec![make_required(ACCOUNT, nd(2026, 1, 1), 60.0)],
+            ),
+            (
+                group_key("expenses/business/hosting/aws", nd(2026, 2, 1)),
+                vec![make_required(ACCOUNT, nd(2026, 2, 1), 30.0)],
+            ),
         ]);
         let entries = vec![make_entry(invoice, ACCOUNT, nd(2026, 1, 1))];
         let audit = find_amount_mismatches(&required_groups, &entries);

@@ -49,8 +49,19 @@ const AMOUNT_LINE_VALUE_HINTS: &[&str] = &[
 ];
 
 const AMOUNT_LINE_NEGATIVE_HINTS: &[&str] = &[
-    "subtotal", "sub total", "net", "ust", "mwst", "vat", "tax", "discount", "usage",
-    "unit price", "price per", "quantity", "qty",
+    "subtotal",
+    "sub total",
+    "net",
+    "ust",
+    "mwst",
+    "vat",
+    "tax",
+    "discount",
+    "usage",
+    "unit price",
+    "price per",
+    "quantity",
+    "qty",
 ];
 
 const ZERO_AMOUNT_SCORE_PENALTY: i32 = 15;
@@ -200,7 +211,8 @@ pub fn parse_pdf_amount(text: &str) -> Option<PdfAmount> {
             };
             pool_ref
                 .into_iter()
-                .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)).cloned()
+                .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal))
+                .cloned()
                 .unwrap_or_else(|| amount_tokens[0].clone())
         } else {
             amount_tokens

@@ -13,8 +13,8 @@ use crate::journal::{load_transactions, validate_document_duties};
 use crate::matching::GroupKey;
 use crate::metadata::metadata_for_document;
 use crate::model::{
-    AmountAuditSkip, AmountMismatch, DocumentEntry, DocumentKind, DuplicateFileGroup,
-    PdfAmount, RequiredDocument, TreeIssue, MONEY_TOLERANCE,
+    AmountAuditSkip, AmountMismatch, DocumentEntry, DocumentKind, DuplicateFileGroup, PdfAmount,
+    RequiredDocument, TreeIssue, MONEY_TOLERANCE,
 };
 
 pub const CHECK_INVALID_CONFIGURATION: &str = "invalid-configuration";
@@ -70,7 +70,10 @@ fn build_check_policy(args: &CheckArgs) -> Result<HashMap<String, String>, Strin
     for check in [CHECK_UNBOOKED_DOCUMENTS, CHECK_AMBIGUOUS_TRANSACTION_GROUPS] {
         policy.insert(check.to_string(), "warn".to_string());
     }
-    for check in [CHECK_AMOUNT_AUDIT_SKIPS, CHECK_MISSING_DOCUMENT_PLACEHOLDERS] {
+    for check in [
+        CHECK_AMOUNT_AUDIT_SKIPS,
+        CHECK_MISSING_DOCUMENT_PLACEHOLDERS,
+    ] {
         policy.insert(check.to_string(), "ignore".to_string());
     }
 
@@ -90,7 +93,10 @@ fn build_check_policy(args: &CheckArgs) -> Result<HashMap<String, String>, Strin
 }
 
 fn should_report(policy: &HashMap<String, String>, check_name: &str) -> bool {
-    policy.get(check_name).map(|l| l != "ignore").unwrap_or(true)
+    policy
+        .get(check_name)
+        .map(|l| l != "ignore")
+        .unwrap_or(true)
 }
 
 fn is_failure(policy: &HashMap<String, String>, check_name: &str, has_items: bool) -> bool {
@@ -207,8 +213,10 @@ fn find_suggested_moves(
             if (doc_amount.amount - txn_amount).abs() > MONEY_TOLERANCE {
                 continue;
             }
-            let target = account_dir_for_document(&entry.path)
-                .join(matched_name(txn.posting_date, entry.path.file_name().unwrap().to_str().unwrap()));
+            let target = account_dir_for_document(&entry.path).join(matched_name(
+                txn.posting_date,
+                entry.path.file_name().unwrap().to_str().unwrap(),
+            ));
             if target.exists() {
                 continue;
             }
@@ -249,10 +257,26 @@ fn find_suggested_moves(
             source: entry.path.clone(),
             target: target.clone(),
             transaction: txn.clone(),
-            metadata_source: if meta_exists { Some(metadata_source) } else { None },
-            metadata_target: if meta_exists { Some(metadata_target) } else { None },
-            support_source: if supp_exists { Some(support_source) } else { None },
-            support_target: if supp_exists { Some(support_target) } else { None },
+            metadata_source: if meta_exists {
+                Some(metadata_source)
+            } else {
+                None
+            },
+            metadata_target: if meta_exists {
+                Some(metadata_target)
+            } else {
+                None
+            },
+            support_source: if supp_exists {
+                Some(support_source)
+            } else {
+                None
+            },
+            support_target: if supp_exists {
+                Some(support_target)
+            } else {
+                None
+            },
         });
     }
 
@@ -321,7 +345,9 @@ pub fn run_check(args: CheckArgs) -> i32 {
         };
     }
 
-    let today = args.today.unwrap_or_else(|| chrono::Local::now().date_naive());
+    let today = args
+        .today
+        .unwrap_or_else(|| chrono::Local::now().date_naive());
 
     let diff = load_document_journal_diff(
         transactions,
@@ -424,7 +450,10 @@ pub fn run_check(args: CheckArgs) -> i32 {
     println!("  Amount Audit:");
     println!("    {} amount mismatches", amount_audit.mismatches.len());
     println!("    {} linked groups checked", amount_audit.checked_groups);
-    println!("    {} linked groups skipped", amount_audit.skipped_groups());
+    println!(
+        "    {} linked groups skipped",
+        amount_audit.skipped_groups()
+    );
     println!("    Skip Reasons:");
     println!(
         "      {} document amount unreadable",
@@ -448,16 +477,52 @@ pub fn run_check(args: CheckArgs) -> i32 {
     );
 
     let has_failure = [
-        is_failure(&policy, CHECK_MISSING_DOCUMENT_COVERAGE, !missing.is_empty()),
-        is_failure(&policy, CHECK_UNBOOKED_DOCUMENTS, !unbooked_entries.is_empty()),
-        is_failure(&policy, CHECK_OVERDUE_UNBOOKED_DOCUMENTS, !overdue_unbooked.is_empty()),
-        is_failure(&policy, CHECK_UNMATCHED_DOCUMENTS, !unmatched_entries.is_empty()),
-        is_failure(&policy, CHECK_UNEXPECTED_FILES, !diff.documents.issues.is_empty()),
+        is_failure(
+            &policy,
+            CHECK_MISSING_DOCUMENT_COVERAGE,
+            !missing.is_empty(),
+        ),
+        is_failure(
+            &policy,
+            CHECK_UNBOOKED_DOCUMENTS,
+            !unbooked_entries.is_empty(),
+        ),
+        is_failure(
+            &policy,
+            CHECK_OVERDUE_UNBOOKED_DOCUMENTS,
+            !overdue_unbooked.is_empty(),
+        ),
+        is_failure(
+            &policy,
+            CHECK_UNMATCHED_DOCUMENTS,
+            !unmatched_entries.is_empty(),
+        ),
+        is_failure(
+            &policy,
+            CHECK_UNEXPECTED_FILES,
+            !diff.documents.issues.is_empty(),
+        ),
         is_failure(&policy, CHECK_DUPLICATE_FILES, !duplicate_files.is_empty()),
-        is_failure(&policy, CHECK_AMOUNT_MISMATCHES, !amount_audit.mismatches.is_empty()),
-        is_failure(&policy, CHECK_AMOUNT_AUDIT_SKIPS, !amount_audit.skipped.is_empty()),
-        is_failure(&policy, CHECK_MISSING_DOCUMENT_PLACEHOLDERS, missing_document_count > 0),
-        is_failure(&policy, CHECK_AMBIGUOUS_TRANSACTION_GROUPS, !ambiguous_groups.is_empty()),
+        is_failure(
+            &policy,
+            CHECK_AMOUNT_MISMATCHES,
+            !amount_audit.mismatches.is_empty(),
+        ),
+        is_failure(
+            &policy,
+            CHECK_AMOUNT_AUDIT_SKIPS,
+            !amount_audit.skipped.is_empty(),
+        ),
+        is_failure(
+            &policy,
+            CHECK_MISSING_DOCUMENT_PLACEHOLDERS,
+            missing_document_count > 0,
+        ),
+        is_failure(
+            &policy,
+            CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
+            !ambiguous_groups.is_empty(),
+        ),
     ]
     .iter()
     .any(|&f| f);
@@ -466,7 +531,11 @@ pub fn run_check(args: CheckArgs) -> i32 {
         println!("OK.");
     }
 
-    if has_failure { 1 } else { 0 }
+    if has_failure {
+        1
+    } else {
+        0
+    }
 }
 
 // --- Print helpers ---
@@ -530,9 +599,7 @@ fn print_overdue_unbooked_documents(items: &[OverdueUnbookedDocument], overdue_a
         return;
     }
     println!("\nOverdue Unbooked Documents ({}):", items.len());
-    println!(
-        "  Unbooked documents whose due_date is more than {overdue_after_days} days ago."
-    );
+    println!("  Unbooked documents whose due_date is more than {overdue_after_days} days ago.");
     for item in items {
         println!("  {}", display_path(&item.path));
         println!("    due_date: {}", item.due_date.format("%Y-%m-%d"));
@@ -659,7 +726,9 @@ fn print_ambiguous(
         ambiguous_groups.len()
     );
     println!("  Date-prefixed filenames can only match by account and date.");
-    println!("  These groups have multiple required transactions on the same date in the same account:");
+    println!(
+        "  These groups have multiple required transactions on the same date in the same account:"
+    );
     let mut sorted: Vec<(&GroupKey, &usize)> = ambiguous_groups.iter().collect();
     sorted.sort_by_key(|(k, _)| *k);
     for ((account, date), count) in sorted {
@@ -681,8 +750,14 @@ const SKIP_REASON_LABELS: &[(&str, &str)] = &[
     ("document_amount_unreadable", "document amount unreadable"),
     ("document_currencies_unclear", "document currencies unclear"),
     ("transaction_amount_missing", "transaction amount missing"),
-    ("transaction_currencies_mixed", "transaction currencies mixed"),
-    ("currency_mismatch", "document/transaction currency mismatch"),
+    (
+        "transaction_currencies_mixed",
+        "transaction currencies mixed",
+    ),
+    (
+        "currency_mismatch",
+        "document/transaction currency mismatch",
+    ),
 ];
 
 fn print_amount_audit_skips(items: &[AmountAuditSkip]) {
@@ -775,7 +850,9 @@ mod tests {
     #[test]
     fn finds_overdue_unbooked_invoice_with_due_date() {
         let tmp = TempDir::new().unwrap();
-        let dir = tmp.path().join("income/business/freelance/customer/unbooked");
+        let dir = tmp
+            .path()
+            .join("income/business/freelance/customer/unbooked");
         std::fs::create_dir_all(&dir).unwrap();
         let unbooked = dir.join("invoice.pdf");
         std::fs::write(&unbooked, b"pdf").unwrap();
@@ -793,7 +870,9 @@ mod tests {
     #[test]
     fn ignores_unbooked_documents_without_due_date() {
         let tmp = TempDir::new().unwrap();
-        let dir = tmp.path().join("income/business/freelance/customer/unbooked");
+        let dir = tmp
+            .path()
+            .join("income/business/freelance/customer/unbooked");
         std::fs::create_dir_all(&dir).unwrap();
         let unbooked = dir.join("invoice.pdf");
         std::fs::write(&unbooked, b"pdf").unwrap();
@@ -815,8 +894,11 @@ mod tests {
         std::fs::create_dir_all(&unbooked_dir).unwrap();
         let unbooked = unbooked_dir.join("invoice.pdf");
         std::fs::write(&unbooked, b"pdf").unwrap();
-        std::fs::write(unbooked_dir.join("invoice.document.yml"),
-            "due_date: 2026-01-31\namount: 12.34\ncurrency: EUR\n").unwrap();
+        std::fs::write(
+            unbooked_dir.join("invoice.document.yml"),
+            "due_date: 2026-01-31\namount: 12.34\ncurrency: EUR\n",
+        )
+        .unwrap();
         let support_dir = unbooked_dir.join("invoice");
         std::fs::create_dir_all(&support_dir).unwrap();
         std::fs::write(support_dir.join("usage.csv"), b"line,item\n").unwrap();
@@ -828,23 +910,37 @@ mod tests {
         assert_eq!(suggestions.len(), 1);
         assert_eq!(suggestions[0].source, unbooked);
         assert_eq!(suggestions[0].target, dir.join("2026-01-02-invoice.pdf"));
-        assert_eq!(suggestions[0].metadata_source, Some(unbooked_dir.join("invoice.document.yml")));
-        assert_eq!(suggestions[0].metadata_target, Some(dir.join("2026-01-02-invoice.document.yml")));
+        assert_eq!(
+            suggestions[0].metadata_source,
+            Some(unbooked_dir.join("invoice.document.yml"))
+        );
+        assert_eq!(
+            suggestions[0].metadata_target,
+            Some(dir.join("2026-01-02-invoice.document.yml"))
+        );
         assert_eq!(suggestions[0].support_source, Some(support_dir.clone()));
-        assert_eq!(suggestions[0].support_target, Some(dir.join("2026-01-02-invoice")));
+        assert_eq!(
+            suggestions[0].support_target,
+            Some(dir.join("2026-01-02-invoice"))
+        );
     }
 
     #[test]
     fn suggests_move_using_metadata_cover_amount() {
         let tmp = TempDir::new().unwrap();
         let account = "expenses:business:transport:train:flixtrain";
-        let dir = tmp.path().join("expenses/business/transport/train/flixtrain");
+        let dir = tmp
+            .path()
+            .join("expenses/business/transport/train/flixtrain");
         let unbooked_dir = dir.join("unbooked");
         std::fs::create_dir_all(&unbooked_dir).unwrap();
         let unbooked = unbooked_dir.join("booking.pdf");
         std::fs::write(&unbooked, b"pdf").unwrap();
-        std::fs::write(unbooked_dir.join("booking.document.yml"),
-            "covers:\n  - amount: 14.99\n    currency: EUR\n").unwrap();
+        std::fs::write(
+            unbooked_dir.join("booking.document.yml"),
+            "covers:\n  - amount: 14.99\n    currency: EUR\n",
+        )
+        .unwrap();
 
         let entry = make_unbooked(unbooked.clone(), account);
         let txn = make_required(account, nd(2026, 6, 10), 14.99);
@@ -865,8 +961,16 @@ mod tests {
         let second = unbooked_dir.join("invoice-b.pdf");
         std::fs::write(&first, b"pdf-a").unwrap();
         std::fs::write(&second, b"pdf-b").unwrap();
-        std::fs::write(unbooked_dir.join("invoice-a.document.yml"), "amount: 12.34\ncurrency: EUR\n").unwrap();
-        std::fs::write(unbooked_dir.join("invoice-b.document.yml"), "amount: 12.34\ncurrency: EUR\n").unwrap();
+        std::fs::write(
+            unbooked_dir.join("invoice-a.document.yml"),
+            "amount: 12.34\ncurrency: EUR\n",
+        )
+        .unwrap();
+        std::fs::write(
+            unbooked_dir.join("invoice-b.document.yml"),
+            "amount: 12.34\ncurrency: EUR\n",
+        )
+        .unwrap();
 
         let entries = vec![
             make_unbooked(first, account),

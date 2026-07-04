@@ -1,11 +1,11 @@
-use cucumber::{World, given, gherkin::Step, then, when};
+use cucumber::{gherkin::Step, given, then, when, World};
 use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
 };
-use tokio::process::Command as AsyncCommand;
 use tempfile::TempDir;
+use tokio::process::Command as AsyncCommand;
 
 // ---------------------------------------------------------------------------
 // World
@@ -43,7 +43,10 @@ impl Drop for DocCheckWorld {
 impl DocCheckWorld {
     async fn new() -> Self {
         let tmp = TempDir::new().unwrap();
-        let work_dir = tmp.path().canonicalize().unwrap_or_else(|_| tmp.path().to_path_buf());
+        let work_dir = tmp
+            .path()
+            .canonicalize()
+            .unwrap_or_else(|_| tmp.path().to_path_buf());
         Self {
             _tmp: tmp,
             work_dir,
@@ -61,7 +64,8 @@ impl DocCheckWorld {
 
     async fn run_args(&mut self, raw: &[String], cwd: &Path, extra_env: &[(&str, &str)]) {
         let bin = PathBuf::from(env!("CARGO_BIN_EXE_hledger-document-check"));
-        let (program, args) = if raw.len() >= 2 && raw[0] == "hledger" && raw[1] == "document-check" {
+        let (program, args) = if raw.len() >= 2 && raw[0] == "hledger" && raw[1] == "document-check"
+        {
             (bin, raw[2..].to_vec())
         } else if !raw.is_empty() && raw[0] == "hledger-document-check" {
             (bin, raw[1..].to_vec())
@@ -187,7 +191,10 @@ fn minimal_pdf(text: &str) -> Vec<u8> {
         "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R \
          /Resources << /Font << /F1 5 0 R >> >> >>"
             .into(),
-        format!("<< /Length {} >>\nstream\n{stream}\nendstream", stream.len()),
+        format!(
+            "<< /Length {} >>\nstream\n{stream}\nendstream",
+            stream.len()
+        ),
         "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".into(),
     ];
     let mut body = "%PDF-1.4\n".to_string();
@@ -292,7 +299,10 @@ async fn check_fava(_world: &mut DocCheckWorld) {
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);
-    assert!(ok, "fava is not installed; install it with: pip install fava");
+    assert!(
+        ok,
+        "fava is not installed; install it with: pip install fava"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -310,7 +320,11 @@ async fn run_command(world: &mut DocCheckWorld, command: String) {
 async fn clone_repository(world: &mut DocCheckWorld) {
     let src = Path::new(env!("CARGO_MANIFEST_DIR"));
     let dst = world.work_dir.join("hledger-document-check");
-    copy_dir_all(src, &dst, &["target", ".git", ".venv", ".uv-cache", "__pycache__"]);
+    copy_dir_all(
+        src,
+        &dst,
+        &["target", ".git", ".venv", ".uv-cache", "__pycache__"],
+    );
     world.checkout_dir = Some(dst);
 }
 
@@ -334,13 +348,19 @@ async fn run_shell_command_from_root(world: &mut DocCheckWorld, step: &Step) {
     // Put the test binary's directory first on PATH so `hledger-document-check`
     // in the script resolves to the compiled test binary.
     let bin = PathBuf::from(env!("CARGO_BIN_EXE_hledger-document-check"));
-    let bin_dir = bin.parent().unwrap_or(Path::new(".")).to_string_lossy().to_string();
+    let bin_dir = bin
+        .parent()
+        .unwrap_or(Path::new("."))
+        .to_string_lossy()
+        .to_string();
     let path_env = format!("{bin_dir}:{}", std::env::var("PATH").unwrap_or_default());
-    world.run_args(
-        &["bash".to_string(), "-c".to_string(), script],
-        &cwd,
-        &[("PATH", &path_env)],
-    ).await;
+    world
+        .run_args(
+            &["bash".to_string(), "-c".to_string(), script],
+            &cwd,
+            &[("PATH", &path_env)],
+        )
+        .await;
 }
 
 #[when(regex = r#"^I start `([^`]+)` from the root directory$"#)]
@@ -386,11 +406,9 @@ async fn fava_is_running(_world: &mut DocCheckWorld, url: String) {
 #[then(regex = r"^(?:the command exits with code|the exit code is) (\d+)$")]
 async fn exit_code(world: &mut DocCheckWorld, code: i32) {
     assert_eq!(
-        world.last_exit_code,
-        code,
+        world.last_exit_code, code,
         "exit code mismatch\nstdout:\n{}\nstderr:\n{}",
-        world.last_stdout,
-        world.last_stderr,
+        world.last_stdout, world.last_stderr,
     );
 }
 
@@ -436,8 +454,7 @@ async fn stdout_does_not_contain(world: &mut DocCheckWorld, step: &Step) {
 async fn stdout_equals(world: &mut DocCheckWorld, step: &Step) {
     let expected = interpolate(&format!("{}\n", docstring(step)), world);
     assert_eq!(
-        world.last_stdout,
-        expected,
+        world.last_stdout, expected,
         "stdout did not equal expected\nExpected:\n{expected}\nActual:\n{}",
         world.last_stdout,
     );
@@ -447,8 +464,7 @@ async fn stdout_equals(world: &mut DocCheckWorld, step: &Step) {
 async fn see_this_output(world: &mut DocCheckWorld, step: &Step) {
     let expected = interpolate(&format!("{}\n", docstring(step)), world);
     assert_eq!(
-        world.last_stdout,
-        expected,
+        world.last_stdout, expected,
         "stdout did not equal expected\nExpected:\n{expected}\nActual:\n{}",
         world.last_stdout,
     );
@@ -460,8 +476,7 @@ async fn file_contains_exactly(world: &mut DocCheckWorld, step: &Step, path: Str
     let actual = fs::read_to_string(world.resolve(&path))
         .unwrap_or_else(|_| panic!("file not found: {path}"));
     assert_eq!(
-        actual,
-        expected,
+        actual, expected,
         "file {path} did not equal expected\nExpected:\n{expected}\nActual:\n{actual}",
     );
 }

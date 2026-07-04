@@ -87,7 +87,10 @@ mod tests {
         let groups = find_duplicate_files(tmp.path());
 
         assert_eq!(groups.len(), 1);
-        let mut expected = vec![original.canonicalize().unwrap(), duplicate.canonicalize().unwrap()];
+        let mut expected = vec![
+            original.canonicalize().unwrap(),
+            duplicate.canonicalize().unwrap(),
+        ];
         expected.sort();
         assert_eq!(groups[0].paths, expected);
     }

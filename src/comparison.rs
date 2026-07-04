@@ -59,8 +59,7 @@ impl DocumentJournalDiff {
             .required_groups
             .iter()
             .filter(|(key, txns)| {
-                txns.len() > 1
-                    && metadata_cover_counts.get(key).copied().unwrap_or(0) < txns.len()
+                txns.len() > 1 && metadata_cover_counts.get(key).copied().unwrap_or(0) < txns.len()
             })
             .map(|(key, txns)| (key.clone(), txns.len()))
             .collect()
@@ -75,7 +74,10 @@ impl DocumentJournalDiff {
             for group_key in group_keys {
                 if let Some(txns) = self.journal.required_groups.get(group_key) {
                     for txn in txns {
-                        let resolved = entry.path.canonicalize().unwrap_or_else(|_| entry.path.clone());
+                        let resolved = entry
+                            .path
+                            .canonicalize()
+                            .unwrap_or_else(|_| entry.path.clone());
                         docs_by_index
                             .entry(txn.transaction_index)
                             .or_default()
@@ -144,7 +146,10 @@ pub fn load_document_journal_diff(
 fn metadata_cover_counts(entries: &[DocumentEntry]) -> HashMap<GroupKey, usize> {
     let mut counts: HashMap<GroupKey, usize> = HashMap::new();
     for entry in entries {
-        if !matches!(entry.kind, DocumentKind::MatchedPdf | DocumentKind::MissingMetadata) {
+        if !matches!(
+            entry.kind,
+            DocumentKind::MatchedPdf | DocumentKind::MissingMetadata
+        ) {
             continue;
         }
         let Ok(Some(metadata)) = metadata_for_document(&entry.path) else {
@@ -159,9 +164,7 @@ fn metadata_cover_counts(entries: &[DocumentEntry]) -> HashMap<GroupKey, usize> 
                 .account_path
                 .clone()
                 .unwrap_or_else(|| entry_account.clone());
-            *counts
-                .entry((account, posting_date))
-                .or_insert(0) += 1;
+            *counts.entry((account, posting_date)).or_insert(0) += 1;
         }
     }
     counts
@@ -207,7 +210,10 @@ mod tests {
         let documents = crate::document_tree::scan_document_tree(tmp.path());
         let diff = build_document_journal_diff(journal, documents);
 
-        assert_eq!(diff.covered_groups(), std::collections::HashSet::from([group_key]));
+        assert_eq!(
+            diff.covered_groups(),
+            std::collections::HashSet::from([group_key])
+        );
         assert!(diff.missing_transactions().is_empty());
         assert!(diff.unmatched_entries().is_empty());
         let by_index = diff.documents_by_transaction_index();

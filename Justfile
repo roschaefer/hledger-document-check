@@ -15,5 +15,20 @@ run *args="":
 test:
     cargo test
 
-check: test
+fmt:
+    cargo fmt --all
+
+fmt-check:
+    cargo fmt --all -- --check
+
+clippy:
+    cargo clippy --all-targets -- -D warnings
+
+machete:
+    cargo machete
+
+audit:
+    cargo audit
+
+check: fmt-check clippy machete audit test
 

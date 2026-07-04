@@ -81,7 +81,10 @@ struct RawEnrichJournal {
     document_tag_root: Option<String>,
 }
 
-pub fn discover_config_path(documents: Option<&str>, explicit_config: Option<&str>) -> Option<PathBuf> {
+pub fn discover_config_path(
+    documents: Option<&str>,
+    explicit_config: Option<&str>,
+) -> Option<PathBuf> {
     if let Some(path) = explicit_config {
         return Some(PathBuf::from(path));
     }
@@ -101,8 +104,8 @@ pub fn load_config(path: Option<&Path>) -> Result<DocumentCheckConfig> {
 
     let text = std::fs::read_to_string(path)
         .with_context(|| format!("reading config {}", path.display()))?;
-    let raw: RawConfig = toml::from_str(&text)
-        .with_context(|| format!("parsing config {}", path.display()))?;
+    let raw: RawConfig =
+        toml::from_str(&text).with_context(|| format!("parsing config {}", path.display()))?;
 
     let base_dir = path.parent().unwrap_or(Path::new("."));
 

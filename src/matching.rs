@@ -1,7 +1,7 @@
-use chrono::NaiveDate;
-use std::collections::HashMap;
 use crate::metadata::metadata_for_document;
 use crate::model::{DocumentEntry, DocumentKind, RequiredDocument};
+use chrono::NaiveDate;
+use std::collections::HashMap;
 
 pub type GroupKey = (String, NaiveDate);
 
@@ -43,7 +43,10 @@ pub fn matched_groups_for_entry(
         return metadata_groups;
     }
 
-    if matches!(entry.kind, DocumentKind::MatchedPdf | DocumentKind::MissingMetadata) {
+    if matches!(
+        entry.kind,
+        DocumentKind::MatchedPdf | DocumentKind::MissingMetadata
+    ) {
         if let Some(key) = entry.key() {
             if required_groups.contains_key(&key) {
                 return vec![key];
@@ -85,13 +88,29 @@ mod tests {
         std::fs::write(dir.join("2025-01-01.document.yml"),
             "covers:\n  - date: 2025-01-01\n    account: liabilities:health-insurance:2023\n    amount: 69.26\n    currency: EUR\n").unwrap();
 
-        let required_groups: HashMap<GroupKey, Vec<crate::model::RequiredDocument>> =
-            [( ("liabilities/health-insurance/2023".to_string(), nd(2025, 1, 1)), vec![] )]
-            .into_iter().collect();
-        let entry = make_entry(invoice, "liabilities:health-insurance", Some(nd(2025, 1, 1)));
+        let required_groups: HashMap<GroupKey, Vec<crate::model::RequiredDocument>> = [(
+            (
+                "liabilities/health-insurance/2023".to_string(),
+                nd(2025, 1, 1),
+            ),
+            vec![],
+        )]
+        .into_iter()
+        .collect();
+        let entry = make_entry(
+            invoice,
+            "liabilities:health-insurance",
+            Some(nd(2025, 1, 1)),
+        );
 
         let groups = matched_groups_for_entry(&entry, &required_groups);
-        assert_eq!(groups, vec![("liabilities/health-insurance/2023".to_string(), nd(2025, 1, 1))]);
+        assert_eq!(
+            groups,
+            vec![(
+                "liabilities/health-insurance/2023".to_string(),
+                nd(2025, 1, 1)
+            )]
+        );
     }
 
     #[test]
@@ -102,10 +121,20 @@ mod tests {
         let invoice = dir.join("2025-01-01.pdf");
         std::fs::write(&invoice, b"pdf").unwrap();
 
-        let required_groups: HashMap<GroupKey, Vec<crate::model::RequiredDocument>> =
-            [( ("liabilities/health-insurance/2023".to_string(), nd(2025, 1, 1)), vec![] )]
-            .into_iter().collect();
-        let entry = make_entry(invoice, "liabilities:health-insurance", Some(nd(2025, 1, 1)));
+        let required_groups: HashMap<GroupKey, Vec<crate::model::RequiredDocument>> = [(
+            (
+                "liabilities/health-insurance/2023".to_string(),
+                nd(2025, 1, 1),
+            ),
+            vec![],
+        )]
+        .into_iter()
+        .collect();
+        let entry = make_entry(
+            invoice,
+            "liabilities:health-insurance",
+            Some(nd(2025, 1, 1)),
+        );
 
         assert_eq!(matched_groups_for_entry(&entry, &required_groups), vec![]);
     }
@@ -117,14 +146,27 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let invoice = dir.join("2026-03-11-invoice.pdf");
         std::fs::write(&invoice, b"pdf").unwrap();
-        std::fs::write(dir.join("2026-03-11-invoice.document.yml"),
-            "covers:\n  - amount: 19.00\n    currency: USD\n").unwrap();
+        std::fs::write(
+            dir.join("2026-03-11-invoice.document.yml"),
+            "covers:\n  - amount: 19.00\n    currency: USD\n",
+        )
+        .unwrap();
 
-        let key = ("expenses/business/software/ai/anthropic".to_string(), nd(2026, 3, 11));
+        let key = (
+            "expenses/business/software/ai/anthropic".to_string(),
+            nd(2026, 3, 11),
+        );
         let required_groups: HashMap<GroupKey, Vec<crate::model::RequiredDocument>> =
             [(key.clone(), vec![])].into_iter().collect();
-        let entry = make_entry(invoice, "expenses:business:software:ai:anthropic", Some(nd(2026, 3, 11)));
+        let entry = make_entry(
+            invoice,
+            "expenses:business:software:ai:anthropic",
+            Some(nd(2026, 3, 11)),
+        );
 
-        assert_eq!(matched_groups_for_entry(&entry, &required_groups), vec![key]);
+        assert_eq!(
+            matched_groups_for_entry(&entry, &required_groups),
+            vec![key]
+        );
     }
 }

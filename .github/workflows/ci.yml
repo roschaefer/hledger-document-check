@@ -23,12 +23,19 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
 
       - name: Set up just
         uses: extractions/setup-just@v3
+
+      - name: Install cargo-audit and cargo-machete
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-machete
 
       - name: Install hledger
         if: runner.os == 'Linux'
@@ -46,11 +53,23 @@ jobs:
       - name: Install fava
         run: pip install fava
 
-      - name: Build release binary
-        run: cargo build --release
+      - name: Check formatting
+        run: just fmt-check
 
-      - name: Run checks
-        run: just check
+      - name: Lint
+        run: just clippy
+
+      - name: Check for unused dependencies
+        run: just machete
+
+      - name: Security audit
+        run: just audit
+
+      - name: Build release binary
+        run: just build
+
+      - name: Run tests
+        run: just test
 
       - name: Copy release binary
         run: cp target/release/hledger-document-check ${{ matrix.asset_name }}

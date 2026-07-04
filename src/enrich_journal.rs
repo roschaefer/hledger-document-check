@@ -74,7 +74,11 @@ fn inject_document_tags(block: &str, document_tags: &[String]) -> String {
     result.join("\n")
 }
 
-fn document_tag_value(path: &Path, document_root: &Path, document_tag_root: Option<&str>) -> String {
+fn document_tag_value(
+    path: &Path,
+    document_root: &Path,
+    document_tag_root: Option<&str>,
+) -> String {
     match document_tag_root {
         None => path
             .file_name()
@@ -121,9 +125,7 @@ pub fn run_enrich(args: EnrichArgs) -> i32 {
     };
 
     if blocks.len() != transactions.len() {
-        eprintln!(
-            "internal error: hledger print output did not align with hledger json output"
-        );
+        eprintln!("internal error: hledger print output did not align with hledger json output");
         return 2;
     }
 
@@ -134,7 +136,9 @@ pub fn run_enrich(args: EnrichArgs) -> i32 {
             .map(|paths| {
                 paths
                     .iter()
-                    .map(|p| document_tag_value(p, &args.documents, args.document_tag_root.as_deref()))
+                    .map(|p| {
+                        document_tag_value(p, &args.documents, args.document_tag_root.as_deref())
+                    })
                     .collect()
             })
             .unwrap_or_default();

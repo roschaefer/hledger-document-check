@@ -28,11 +28,13 @@ fn main() {
             } else {
                 format!("{stem}-{}", i + 1)
             };
-            let feature_content = format!(
-                "# Generated from specs/{stem}.md\n\n{}\n",
-                block.trim_end()
-            );
-            fs::write(features_dir.join(format!("{name}.feature")), feature_content).unwrap();
+            let feature_content =
+                format!("# Generated from specs/{stem}.md\n\n{}\n", block.trim_end());
+            fs::write(
+                features_dir.join(format!("{name}.feature")),
+                feature_content,
+            )
+            .unwrap();
         }
     }
 }

@@ -64,7 +64,10 @@ pub fn matched_name(match_date: NaiveDate, original_name: &str) -> String {
 }
 
 pub fn account_path_from_dir(directory: &Path, root: &Path) -> PathBuf {
-    directory.strip_prefix(root).unwrap_or(directory).to_path_buf()
+    directory
+        .strip_prefix(root)
+        .unwrap_or(directory)
+        .to_path_buf()
 }
 
 pub fn is_unbooked_document_path(path: &Path) -> bool {

@@ -13,13 +13,15 @@ pub fn load_transactions(journal_path: Option<&Path>) -> Result<Vec<Value>> {
     }
     cmd.args(["print", "--output-format", "json"]);
 
-    let output = cmd.output().context("running hledger print --output-format json")?;
+    let output = cmd
+        .output()
+        .context("running hledger print --output-format json")?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!("hledger failed: {stderr}");
     }
-    let transactions: Vec<Value> = serde_json::from_slice(&output.stdout)
-        .context("parsing hledger JSON output")?;
+    let transactions: Vec<Value> =
+        serde_json::from_slice(&output.stdout).context("parsing hledger JSON output")?;
     Ok(transactions)
 }
 
@@ -30,7 +32,9 @@ pub fn posting_amount(posting: &Value) -> Option<f64> {
     }
     let quantity = amounts[0].get("aquantity")?;
     let fp = quantity.get("floatingPoint")?;
-    let v = fp.as_f64().or_else(|| fp.as_str().and_then(|s| s.parse().ok()))?;
+    let v = fp
+        .as_f64()
+        .or_else(|| fp.as_str().and_then(|s| s.parse().ok()))?;
     Some(v.abs())
 }
 
@@ -39,7 +43,10 @@ pub fn posting_commodity(posting: &Value) -> Option<String> {
     if amounts.is_empty() {
         return None;
     }
-    amounts[0].get("acommodity")?.as_str().map(|s| s.to_string())
+    amounts[0]
+        .get("acommodity")?
+        .as_str()
+        .map(|s| s.to_string())
 }
 
 pub fn posting_tags(posting: &Value) -> std::collections::HashMap<String, String> {
@@ -113,8 +120,11 @@ fn has_required_prefix_tag(
     if required_tag_prefixes.is_empty() {
         return false;
     }
-    tags.keys()
-        .any(|key| required_tag_prefixes.iter().any(|prefix| key.starts_with(prefix.as_str())))
+    tags.keys().any(|key| {
+        required_tag_prefixes
+            .iter()
+            .any(|prefix| key.starts_with(prefix.as_str()))
+    })
 }
 
 pub fn posting_requires_document(
@@ -126,9 +136,7 @@ pub fn posting_requires_document(
     match tags.get("document_check").map(String::as_str) {
         Some("required") => true,
         Some("exempt") => false,
-        Some("counter_account") => {
-            counter_account_matches(posting, transaction_postings, &tags)
-        }
+        Some("counter_account") => counter_account_matches(posting, transaction_postings, &tags),
         None => has_required_prefix_tag(&tags, required_tag_prefixes),
         _ => false,
     }
@@ -145,17 +153,21 @@ pub fn validate_document_duties(transactions: &[Value]) -> Vec<String> {
             .unwrap_or(&[]);
         for posting in postings {
             let tags = posting_tags(posting);
-            let account = posting.get("paccount").and_then(|v| v.as_str()).unwrap_or("");
+            let account = posting
+                .get("paccount")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             if tags.get("document_check").map(String::as_str) == Some("counter_account")
-                && counter_account_patterns(&tags).is_empty() {
-                    let key = format!("{account}::counter_account");
-                    if !seen.contains(&key) {
-                        seen.insert(key);
-                        errors.push(format!(
+                && counter_account_patterns(&tags).is_empty()
+            {
+                let key = format!("{account}::counter_account");
+                if !seen.contains(&key) {
+                    seen.insert(key);
+                    errors.push(format!(
                             "  {account}: document_check:counter_account requires document_check_counter_account"
                         ));
-                    }
                 }
+            }
         }
     }
     errors
@@ -184,10 +196,7 @@ pub fn iter_required_documents(
             .unwrap_or("")
             .trim()
             .to_string();
-        let transaction_index = txn
-            .get("tindex")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(-1);
+        let transaction_index = txn.get("tindex").and_then(|v| v.as_i64()).unwrap_or(-1);
 
         let postings: Vec<&Value> = txn
             .get("tpostings")
@@ -266,11 +275,20 @@ mod tests {
     fn posting_tags_come_from_hledger_json() {
         let p = posting(
             "income:business:reimbursements:health-insurance",
-            &[("document_check", "required"), ("document_check_match_role", "incoming_only")],
+            &[
+                ("document_check", "required"),
+                ("document_check_match_role", "incoming_only"),
+            ],
         );
         let tags = posting_tags(&p);
-        assert_eq!(tags.get("document_check").map(String::as_str), Some("required"));
-        assert_eq!(tags.get("document_check_match_role").map(String::as_str), Some("incoming_only"));
+        assert_eq!(
+            tags.get("document_check").map(String::as_str),
+            Some("required")
+        );
+        assert_eq!(
+            tags.get("document_check_match_role").map(String::as_str),
+            Some("incoming_only")
+        );
     }
 
     #[test]
@@ -280,7 +298,10 @@ mod tests {
             "ptags": [["document_check", "exempt"], ["tax_label_de", "Erstattungen"], ["document_check", "required"]]
         });
         let tags = posting_tags(&p);
-        assert_eq!(tags.get("document_check").map(String::as_str), Some("exempt"));
+        assert_eq!(
+            tags.get("document_check").map(String::as_str),
+            Some("exempt")
+        );
     }
 
     // --- posting_requires_document ---
@@ -288,7 +309,11 @@ mod tests {
     #[test]
     fn requires_document_defaults_to_false_without_tags_or_prefixes() {
         let p = posting("expenses:test", &[("tax_role", "business_expense")]);
-        assert!(!posting_requires_document(&p, std::slice::from_ref(&p), &[]));
+        assert!(!posting_requires_document(
+            &p,
+            std::slice::from_ref(&p),
+            &[]
+        ));
     }
 
     #[test]
@@ -304,12 +329,18 @@ mod tests {
     #[test]
     fn counter_account_mode_matches_counter_account() {
         let postings = vec![
-            posting("expenses:insurance:health:provider", &[("document_check", "exempt")]),
+            posting(
+                "expenses:insurance:health:provider",
+                &[("document_check", "exempt")],
+            ),
             posting(
                 "liabilities:health-insurance",
                 &[
                     ("document_check", "counter_account"),
-                    ("document_check_counter_account", "expenses:insurance:health:provider"),
+                    (
+                        "document_check_counter_account",
+                        "expenses:insurance:health:provider",
+                    ),
                 ],
             ),
         ];
@@ -320,13 +351,22 @@ mod tests {
     #[test]
     fn counter_account_mode_matches_any_named_counter_account() {
         let postings = vec![
-            posting("expenses:insurance:pension:provider", &[("document_check", "exempt")]),
+            posting(
+                "expenses:insurance:pension:provider",
+                &[("document_check", "exempt")],
+            ),
             posting(
                 "liabilities:insurance-notices",
                 &[
                     ("document_check", "counter_account"),
-                    ("document_check_counter_account_a", "expenses:insurance:health:provider"),
-                    ("document_check_counter_account_b", "expenses:insurance:pension:provider"),
+                    (
+                        "document_check_counter_account_a",
+                        "expenses:insurance:health:provider",
+                    ),
+                    (
+                        "document_check_counter_account_b",
+                        "expenses:insurance:pension:provider",
+                    ),
                 ],
             ),
         ];
@@ -341,7 +381,10 @@ mod tests {
                 "liabilities:health-insurance",
                 &[
                     ("document_check", "counter_account"),
-                    ("document_check_counter_account", "expenses:insurance:health:provider"),
+                    (
+                        "document_check_counter_account",
+                        "expenses:insurance:health:provider",
+                    ),
                 ],
             ),
         ];
@@ -360,7 +403,8 @@ mod tests {
         })];
         let errors = validate_document_duties(&transactions);
         assert_eq!(errors.len(), 1);
-        assert!(errors[0].contains("document_check:counter_account requires document_check_counter_account"));
+        assert!(errors[0]
+            .contains("document_check:counter_account requires document_check_counter_account"));
     }
 
     #[test]
@@ -368,7 +412,10 @@ mod tests {
         let transactions = vec![json!({
             "tpostings": [posting("expenses:test", &[("tax_role", "business_expense")])]
         })];
-        assert_eq!(validate_document_duties(&transactions), Vec::<String>::new());
+        assert_eq!(
+            validate_document_duties(&transactions),
+            Vec::<String>::new()
+        );
     }
 
     // --- iter_required_documents ---

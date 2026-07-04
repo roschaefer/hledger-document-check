@@ -105,7 +105,11 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
             });
         }
         serde_yaml::Value::Mapping(m) => m,
-        _ => return Err(DocumentMetadataError("metadata root must be a mapping".into())),
+        _ => {
+            return Err(DocumentMetadataError(
+                "metadata root must be a mapping".into(),
+            ))
+        }
     };
 
     validate_keys(mapping, ALLOWED_TOP_LEVEL_KEYS, "metadata root")?;
@@ -146,9 +150,9 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
             .ok_or_else(|| DocumentMetadataError("covers must be an array".into()))?;
 
         for (i, item) in arr.iter().enumerate() {
-            let cover_mapping = item.as_mapping().ok_or_else(|| {
-                DocumentMetadataError(format!("covers[{i}]: must be a mapping"))
-            })?;
+            let cover_mapping = item
+                .as_mapping()
+                .ok_or_else(|| DocumentMetadataError(format!("covers[{i}]: must be a mapping")))?;
 
             validate_keys(cover_mapping, ALLOWED_COVER_KEYS, &format!("covers[{i}]"))?;
 
@@ -185,15 +189,12 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
         }
     } else {
         // No `covers` array. If top-level cover-like fields exist, synthesize a single cover.
-        let has_cover_fields = top_level_date.is_some()
-            || top_level_account.is_some()
-            || get("description").is_some();
+        let has_cover_fields =
+            top_level_date.is_some() || top_level_account.is_some() || get("description").is_some();
 
         if has_cover_fields {
             let posting_date = top_level_date.or(default_date);
-            let account_path = top_level_account
-                .as_deref()
-                .map(|a| a.replace(':', "/"));
+            let account_path = top_level_account.as_deref().map(|a| a.replace(':', "/"));
             covers.push(DocumentCover {
                 posting_date,
                 account_path,
@@ -307,9 +308,16 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path().join("expenses/business/software/ai/anthropic");
         std::fs::create_dir_all(&dir).unwrap();
-        let meta = write(&dir, "2026-03-11-invoice.document.yml", "covers:\n  - amount: 19.00\n    currency: USD\n");
+        let meta = write(
+            &dir,
+            "2026-03-11-invoice.document.yml",
+            "covers:\n  - amount: 19.00\n    currency: USD\n",
+        );
         let loaded = load_document_metadata(&meta).unwrap();
-        assert_eq!(loaded.covers[0].posting_date, Some(NaiveDate::from_ymd_opt(2026, 3, 11).unwrap()));
+        assert_eq!(
+            loaded.covers[0].posting_date,
+            Some(NaiveDate::from_ymd_opt(2026, 3, 11).unwrap())
+        );
         assert!(loaded.covers[0].account_path.is_none());
     }
 
@@ -321,7 +329,10 @@ mod tests {
         let meta = write(&dir, "2025-01-01.document.yml",
             "covers:\n  - date: 2025-01-01\n    account: liabilities:health-insurance:2023\n    amount: 69.26\n    currency: EUR\n");
         let loaded = load_document_metadata(&meta).unwrap();
-        assert_eq!(loaded.covers[0].account_path.as_deref(), Some("liabilities/health-insurance/2023"));
+        assert_eq!(
+            loaded.covers[0].account_path.as_deref(),
+            Some("liabilities/health-insurance/2023")
+        );
     }
 
     #[test]
@@ -347,8 +358,14 @@ mod tests {
             "date: 2022-06-03\naccount: Expenses:Business:Hosting:AWS\namount: 2.99\ncurrency: EUR\n");
         let loaded = load_document_metadata(&meta).unwrap();
         assert_eq!(loaded.covers.len(), 1);
-        assert_eq!(loaded.covers[0].posting_date, Some(NaiveDate::from_ymd_opt(2022, 6, 3).unwrap()));
-        assert_eq!(loaded.covers[0].account_path.as_deref(), Some("Expenses/Business/Hosting/AWS"));
+        assert_eq!(
+            loaded.covers[0].posting_date,
+            Some(NaiveDate::from_ymd_opt(2022, 6, 3).unwrap())
+        );
+        assert_eq!(
+            loaded.covers[0].account_path.as_deref(),
+            Some("Expenses/Business/Hosting/AWS")
+        );
         assert_eq!(loaded.covers[0].amount, Some(2.99));
         assert_eq!(loaded.covers[0].currency.as_deref(), Some("EUR"));
     }
@@ -356,11 +373,16 @@ mod tests {
     #[test]
     fn metadata_due_date_is_parsed() {
         let tmp = TempDir::new().unwrap();
-        let dir = tmp.path().join("income/business/freelance/customer/unbooked");
+        let dir = tmp
+            .path()
+            .join("income/business/freelance/customer/unbooked");
         std::fs::create_dir_all(&dir).unwrap();
         let meta = write(&dir, "invoice.document.yml", "due_date: 2026-04-15\n");
         let loaded = load_document_metadata(&meta).unwrap();
-        assert_eq!(loaded.due_date, Some(NaiveDate::from_ymd_opt(2026, 4, 15).unwrap()));
+        assert_eq!(
+            loaded.due_date,
+            Some(NaiveDate::from_ymd_opt(2026, 4, 15).unwrap())
+        );
     }
 
     #[test]
@@ -368,7 +390,11 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path().join("expenses/business/software");
         std::fs::create_dir_all(&dir).unwrap();
-        let meta = write(&dir, "2026-01-01-suite.document.yml", "amount: 100.00\nunexpected: true\n");
+        let meta = write(
+            &dir,
+            "2026-01-01-suite.document.yml",
+            "amount: 100.00\nunexpected: true\n",
+        );
         assert!(load_document_metadata(&meta).is_err());
     }
 
@@ -377,7 +403,11 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path().join("expenses/business/software");
         std::fs::create_dir_all(&dir).unwrap();
-        let meta = write(&dir, "2026-01-01-suite.document.yml", "covers:\n  amount: 100.00\n");
+        let meta = write(
+            &dir,
+            "2026-01-01-suite.document.yml",
+            "covers:\n  amount: 100.00\n",
+        );
         let err = load_document_metadata(&meta).unwrap_err();
         assert!(err.to_string().contains("covers"));
     }
