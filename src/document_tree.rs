@@ -256,7 +256,8 @@ pub fn scan_document_tree(root: &Path) -> DocumentTree {
         if in_support_tree(support_dir, &support_dirs) {
             continue;
         }
-        let pdf = support_dir.with_extension("pdf");
+        let name = support_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let pdf = support_dir.with_file_name(format!("{name}.pdf"));
         if !pdf.exists() {
             issues.push(TreeIssue {
                 path: support_dir.clone(),
@@ -352,6 +353,30 @@ mod tests {
         assert!(tree.unbooked_entries.is_empty());
         assert_eq!(tree.matched_entries.len(), 1);
         assert!(tree.matched_entries[0].match_date.is_none());
+    }
+
+    #[test]
+    fn support_dir_matches_pdf_stem_containing_a_dot() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().join("expenses/phone/service");
+        std::fs::create_dir_all(&dir).unwrap();
+        write(
+            &dir,
+            "2026-06-22-rechnung-FM.F26018179745.pdf",
+            b"pdf",
+        );
+        std::fs::create_dir_all(dir.join("2026-06-22-rechnung-FM.F26018179745")).unwrap();
+
+        let tree = scan_document_tree(tmp.path());
+
+        assert!(
+            tree.issues.is_empty(),
+            "support dir should match its PDF even though the stem contains a dot; \
+             Path::with_extension(\"pdf\") splits on the last dot and would truncate \
+             an invoice number like \"FM.F26018179745\" instead of appending \".pdf\" \
+             to the full name. Got: {:?}",
+            tree.issues
+        );
     }
 
     #[test]
