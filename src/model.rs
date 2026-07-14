@@ -78,13 +78,16 @@ pub struct RedundantMetadataField {
 }
 
 #[derive(Debug, Clone)]
-pub struct WrongAccountCover {
+pub struct UnresolvableCover {
     pub path: PathBuf,
+    /// `"top-level"` or `"covers[N]"`, mirroring `DocumentCover::location`.
+    pub location: String,
     pub declared_account: String,
-    pub posting_date: NaiveDate,
-    /// The account the file's own location implies, when that account does
-    /// have a matching required transaction (a likely intended value).
-    pub suggested_account: Option<String>,
+    pub declared_date: NaiveDate,
+    /// The (account, date) pair the file's own location implies, when that
+    /// pair does have a matching required transaction (a likely intended
+    /// value).
+    pub suggested: Option<(String, NaiveDate)>,
 }
 
 #[derive(Debug, Clone)]
@@ -152,6 +155,9 @@ impl AmountAudit {
 
 #[derive(Debug, Clone)]
 pub struct DocumentCover {
+    /// Where this cover came from in the YAML: `"top-level"` for the
+    /// shorthand form, or `"covers[N]"` for an explicit `covers:` list entry.
+    pub location: String,
     pub posting_date: Option<NaiveDate>,
     pub account_path: Option<String>,
     pub amount: Option<f64>,

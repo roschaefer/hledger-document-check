@@ -30,7 +30,7 @@ amount-audit-skips = "ignore"
 missing-document-placeholders = "ignore"
 ambiguous-transaction-groups = "warn"
 redundant-metadata = "warn"
-wrong-account-metadata = "warn"
+unresolvable-cover-metadata = "warn"
 
 [enrich_journal]
 # Prefix written into emitted document: tags.

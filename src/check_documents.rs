@@ -2,10 +2,10 @@ use chrono::NaiveDate;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use crate::account_audit::find_wrong_account_metadata;
 use crate::amount_audit::find_amount_mismatches;
 use crate::amounts::document_amount_for_document;
 use crate::comparison::{load_document_journal_diff, DocumentJournalDiff};
+use crate::cover_audit::find_unresolvable_covers;
 use crate::document_paths::{
     account_dir_for_document, matched_name, metadata_path_for_document, support_dir_for_document,
 };
@@ -15,7 +15,7 @@ use crate::matching::GroupKey;
 use crate::metadata::metadata_for_document;
 use crate::model::{
     AmountAuditSkip, AmountMismatch, DocumentEntry, DocumentKind, DuplicateFileGroup, PdfAmount,
-    RedundantMetadataField, RequiredDocument, TreeIssue, WrongAccountCover, MONEY_TOLERANCE,
+    RedundantMetadataField, RequiredDocument, TreeIssue, UnresolvableCover, MONEY_TOLERANCE,
 };
 use crate::redundancy::find_redundant_metadata;
 
@@ -31,7 +31,7 @@ pub const CHECK_AMOUNT_AUDIT_SKIPS: &str = "amount-audit-skips";
 pub const CHECK_MISSING_DOCUMENT_PLACEHOLDERS: &str = "missing-document-placeholders";
 pub const CHECK_AMBIGUOUS_TRANSACTION_GROUPS: &str = "ambiguous-transaction-groups";
 pub const CHECK_REDUNDANT_METADATA: &str = "redundant-metadata";
-pub const CHECK_WRONG_ACCOUNT_METADATA: &str = "wrong-account-metadata";
+pub const CHECK_UNRESOLVABLE_COVER_METADATA: &str = "unresolvable-cover-metadata";
 
 pub const ALL_CHECKS: &[&str] = &[
     CHECK_INVALID_CONFIGURATION,
@@ -46,7 +46,7 @@ pub const ALL_CHECKS: &[&str] = &[
     CHECK_MISSING_DOCUMENT_PLACEHOLDERS,
     CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
     CHECK_REDUNDANT_METADATA,
-    CHECK_WRONG_ACCOUNT_METADATA,
+    CHECK_UNRESOLVABLE_COVER_METADATA,
 ];
 
 pub struct CheckArgs {
@@ -77,7 +77,7 @@ fn build_check_policy(args: &CheckArgs) -> Result<HashMap<String, String>, Strin
         CHECK_UNBOOKED_DOCUMENTS,
         CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
         CHECK_REDUNDANT_METADATA,
-        CHECK_WRONG_ACCOUNT_METADATA,
+        CHECK_UNRESOLVABLE_COVER_METADATA,
     ] {
         policy.insert(check.to_string(), "warn".to_string());
     }
@@ -376,8 +376,8 @@ pub fn run_check(args: CheckArgs) -> i32 {
     let duplicate_files = find_duplicate_files(&args.documents);
     let amount_audit = find_amount_mismatches(required_groups, &diff.documents.matched_entries);
     let redundant_metadata = find_redundant_metadata(&args.documents);
-    let wrong_account_metadata =
-        find_wrong_account_metadata(required_groups, &diff.documents.matched_entries);
+    let unresolvable_covers =
+        find_unresolvable_covers(required_groups, &diff.documents.matched_entries);
 
     let unbooked_entries = &diff.documents.unbooked_entries;
     let overdue_unbooked =
@@ -448,8 +448,8 @@ pub fn run_check(args: CheckArgs) -> i32 {
         print_redundant_metadata(&redundant_metadata);
     }
 
-    if should_report(&policy, CHECK_WRONG_ACCOUNT_METADATA) {
-        print_wrong_account_metadata(&wrong_account_metadata);
+    if should_report(&policy, CHECK_UNRESOLVABLE_COVER_METADATA) {
+        print_unresolvable_covers(&unresolvable_covers);
     }
 
     let matched_group_count = required_groups
@@ -471,8 +471,8 @@ pub fn run_check(args: CheckArgs) -> i32 {
     println!("    {} duplicate groups", duplicate_files.len());
     println!("    {} redundant metadata fields", redundant_metadata.len());
     println!(
-        "    {} wrong account metadata fields",
-        wrong_account_metadata.len()
+        "    {} unresolvable cover metadata fields",
+        unresolvable_covers.len()
     );
     println!("  Amount Audit:");
     println!("    {} amount mismatches", amount_audit.mismatches.len());
@@ -557,8 +557,8 @@ pub fn run_check(args: CheckArgs) -> i32 {
         ),
         is_failure(
             &policy,
-            CHECK_WRONG_ACCOUNT_METADATA,
-            !wrong_account_metadata.is_empty(),
+            CHECK_UNRESOLVABLE_COVER_METADATA,
+            !unresolvable_covers.is_empty(),
         ),
     ]
     .iter()
@@ -683,13 +683,13 @@ fn print_redundant_metadata(items: &[RedundantMetadataField]) {
     }
 }
 
-fn print_wrong_account_metadata(items: &[WrongAccountCover]) {
+fn print_unresolvable_covers(items: &[UnresolvableCover]) {
     if items.is_empty() {
         return;
     }
-    println!("\nWrong Account Metadata ({}):", items.len());
+    println!("\nUnresolvable Cover Metadata ({}):", items.len());
     println!(
-        "  A declared account has no matching required transaction; the metadata is probably wrong."
+        "  A cover doesn't correspond to any required transaction; the metadata is probably wrong."
     );
     let mut last_path: Option<&Path> = None;
     for item in items {
@@ -697,15 +697,17 @@ fn print_wrong_account_metadata(items: &[WrongAccountCover]) {
             println!("  {}", display_path(&item.path));
             last_path = Some(item.path.as_path());
         }
-        let date = item.posting_date.format("%Y-%m-%d");
-        match &item.suggested_account {
-            Some(suggestion) => println!(
-                "    declares {} @ {date} — no such transaction; the file's location implies {suggestion} instead",
-                item.declared_account
+        let date = item.declared_date.format("%Y-%m-%d");
+        match &item.suggested {
+            Some((suggested_account, suggested_date)) => println!(
+                "    {} declares {} @ {date} — no such transaction; the file's location implies {suggested_account} @ {} instead",
+                item.location,
+                item.declared_account,
+                suggested_date.format("%Y-%m-%d")
             ),
             None => println!(
-                "    declares {} @ {date} — no matching required transaction found",
-                item.declared_account
+                "    {} declares {} @ {date} — no matching required transaction found",
+                item.location, item.declared_account
             ),
         }
     }

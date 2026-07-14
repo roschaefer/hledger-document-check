@@ -157,7 +157,7 @@ Feature: Full repository example
           0 unexpected files
           0 duplicate groups
           0 redundant metadata fields
-          0 wrong account metadata fields
+          0 unresolvable cover metadata fields
         Amount Audit:
           0 amount mismatches
           8 linked groups checked
@@ -283,7 +283,7 @@ Built-in check names:
 - `missing-document-placeholders`
 - `ambiguous-transaction-groups`
 - `redundant-metadata`
-- `wrong-account-metadata`
+- `unresolvable-cover-metadata`
 
 ## Configuration
 
@@ -324,7 +324,7 @@ Feature: Initial configuration
       missing-document-placeholders = "ignore"
       ambiguous-transaction-groups = "warn"
       redundant-metadata = "warn"
-      wrong-account-metadata = "warn"
+      unresolvable-cover-metadata = "warn"
 
       [enrich_journal]
       # Prefix written into emitted document: tags.

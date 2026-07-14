@@ -1,9 +1,9 @@
-mod account_audit;
 mod amount_audit;
 mod amounts;
 mod check_documents;
 mod comparison;
 mod config;
+mod cover_audit;
 mod document_paths;
 mod document_tree;
 mod duplicates;

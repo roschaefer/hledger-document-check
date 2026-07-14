@@ -158,7 +158,7 @@ Feature: Unbooked document move suggestions
           0 unexpected files
           0 duplicate groups
           0 redundant metadata fields
-          0 wrong account metadata fields
+          0 unresolvable cover metadata fields
         Amount Audit:
           0 amount mismatches
           0 linked groups checked

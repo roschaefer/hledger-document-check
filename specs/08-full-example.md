@@ -78,7 +78,7 @@ Feature: Full repository example
           0 unexpected files
           0 duplicate groups
           0 redundant metadata fields
-          0 wrong account metadata fields
+          0 unresolvable cover metadata fields
         Amount Audit:
           0 amount mismatches
           8 linked groups checked

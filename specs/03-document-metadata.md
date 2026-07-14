@@ -487,20 +487,25 @@ Feature: Redundant metadata fields are flagged
       """
 ```
 
-## Wrong Account Metadata
+## Unresolvable Cover Metadata
 
-A `covers[].account` override that doesn't match any required transaction is
-silently ignored: matching falls back to the file's own directory/filename
-instead, so the document still gets matched correctly and nothing else
-surfaces the mistake. The `wrong-account-metadata` check flags these declared
-accounts directly, and suggests the file's own location as the likely
-intended value when that location does have a matching transaction. It only
-reports a `warn` by default, so it does not fail the build on its own.
+A `covers[]` entry — its account, its date, or both — that doesn't match any
+required transaction is silently dropped: matching falls back to (or is
+carried by) the file's own directory/filename identity instead, so the
+document can still end up matched correctly and nothing else surfaces the
+mistake. The `unresolvable-cover-metadata` check flags these covers
+directly, and suggests the file's own location as the likely intended value
+when that location does have a matching transaction. A cover that asserts
+nothing beyond the file's own location is never flagged this way even when it
+resolves to nothing — that's just an unmatched document, already reported by
+`unmatched-documents`. This check only reports a `warn` by default, so it
+does not fail the build on its own.
 
 ```gherkin
-Feature: Wrong account metadata is flagged
-  A declared account that matches no required transaction is reported, with a
-  suggestion when the file's own location would have matched instead.
+Feature: Unresolvable cover metadata is flagged
+  A cover whose account/date pair matches no required transaction is
+  reported, with a suggestion when the file's own location would have
+  matched instead.
 
   Scenario: A cover account is missing a subaccount segment the folder implies
     Given a file named "journal.journal" with content:
@@ -528,13 +533,74 @@ Feature: Wrong account metadata is flagged
     Then the command exits with code 0
     And stdout contains:
       """text
-      Wrong Account Metadata (1):
+      Unresolvable Cover Metadata (1):
       ...
         documents/expenses/business/hosting/storage/legacy/2026-01-05.document.yml
-          declares expenses/business/hosting/storage @ 2026-01-05 — no such transaction; the file's location implies expenses/business/hosting/storage/legacy instead
+          covers[0] declares expenses/business/hosting/storage @ 2026-01-05 — no such transaction; the file's location implies expenses/business/hosting/storage/legacy @ 2026-01-05 instead
       """
 
-  Scenario: A cover account matches nothing, with no location-based suggestion either
+  Scenario: A cover date doesn't match when the document was actually posted
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                            ; document_check:exempt
+      account expenses:business:hosting:mailbox      ; document_check:required
+
+      2024-01-05 Mailbox Invoice
+          expenses:business:hosting:mailbox          8.94 EUR
+          assets:bank                                -8.94 EUR
+      """
+    And a file named "documents/expenses/business/hosting/mailbox/2024-01-05-invoice-1234.pdf" with content:
+      """
+      mailbox invoice
+      """
+    And a file named "documents/expenses/business/hosting/mailbox/2024-01-05-invoice-1234.document.yml" with content:
+      """yaml
+      covers:
+        - date: 2024-01-06
+          amount: 8.94
+          currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout contains:
+      """text
+      Unresolvable Cover Metadata (1):
+      ...
+        documents/expenses/business/hosting/mailbox/2024-01-05-invoice-1234.document.yml
+          covers[0] declares expenses/business/hosting/mailbox @ 2024-01-06 — no such transaction; the file's location implies expenses/business/hosting/mailbox @ 2024-01-05 instead
+      """
+
+  Scenario: A mistake in the top-level shorthand form is labeled top-level, not covers[N]
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                     ; document_check:exempt
+      account expenses:business:hosting:aws   ; document_check:required
+
+      2022-06-03 AWS EMEA
+          expenses:business:hosting:aws        2.99 EUR
+          assets:bank                         -2.99 EUR
+      """
+    And a file named "documents/expenses/business/hosting/aws/2022-06-03-invoice.pdf" with content:
+      """
+      aws invoice
+      """
+    And a file named "documents/expenses/business/hosting/aws/2022-06-03-invoice.document.yml" with content:
+      """yaml
+      date: 2022-06-04
+      amount: 2.99
+      currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout contains:
+      """text
+      Unresolvable Cover Metadata (1):
+      ...
+        documents/expenses/business/hosting/aws/2022-06-03-invoice.document.yml
+          top-level declares expenses/business/hosting/aws @ 2022-06-04 — no such transaction; the file's location implies expenses/business/hosting/aws @ 2022-06-03 instead
+      """
+
+  Scenario: A cover matches nothing, with no location-based suggestion either
     Given a file named "journal.journal" with content:
       """hledger
       account assets:bank ; document_check:exempt
@@ -555,10 +621,10 @@ Feature: Wrong account metadata is flagged
     Then the command exits with code 0
     And stdout contains:
       """text
-      Wrong Account Metadata (1):
+      Unresolvable Cover Metadata (1):
       ...
         documents/expenses/business/misc/2026-01-01-note.document.yml
-          declares expenses/business/nonexistent @ 2026-01-01 — no matching required transaction found
+          covers[0] declares expenses/business/nonexistent @ 2026-01-01 — no matching required transaction found
       """
 
   Scenario: A legitimate account override that resolves to a real transaction is not flagged
@@ -594,7 +660,96 @@ Feature: Wrong account metadata is flagged
     Then the command exits with code 0
     And stdout does not contain:
       """text
-      Wrong Account Metadata
+      Unresolvable Cover Metadata
+      """
+
+  Scenario: A legitimate date override that resolves to a real transaction is not flagged
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                            ; document_check:exempt
+      account expenses:business:hosting:mailbox      ; document_check:required
+
+      2024-01-20 Mailbox Invoice Cleared
+          expenses:business:hosting:mailbox          8.94 EUR
+          assets:bank                                -8.94 EUR
+      """
+    And a file named "documents/expenses/business/hosting/mailbox/2024-01-05-invoice-1234.pdf" with content:
+      """
+      mailbox invoice
+      """
+    And a file named "documents/expenses/business/hosting/mailbox/2024-01-05-invoice-1234.document.yml" with content:
+      """yaml
+      covers:
+        - date: 2024-01-20
+          amount: 8.94
+          currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout does not contain:
+      """text
+      Unresolvable Cover Metadata
+      """
+
+  Scenario: A trivial cover on a genuinely unmatched document is not double-reported
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                        ; document_check:exempt
+      account expenses:business:software         ; document_check:required
+      """
+    And a file named "documents/expenses/business/software/2026-01-01-suite.pdf" with content:
+      """
+      suite invoice
+      """
+    And a file named "documents/expenses/business/software/2026-01-01-suite.document.yml" with content:
+      """yaml
+      covers:
+        - date: 2026-01-01
+          account: expenses:business:software
+          amount: 92.00
+          currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 1
+    And stdout contains:
+      """text
+      Unmatched Documents (1):
+      """
+    And stdout does not contain:
+      """text
+      Unresolvable Cover Metadata
+      """
+
+  Scenario: One wrong cover among several on an otherwise-matched multi-installment document
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                                  ; document_check:exempt
+      account income:business:freelance:customer           ; document_check:required
+
+      2026-01-05 Customer Payment Rate 1
+          assets:bank                                      60.00 EUR
+          income:business:freelance:customer
+      """
+    And a file named "documents/income/business/freelance/customer/customer-project.pdf" with content:
+      """
+      customer project invoice
+      """
+    And a file named "documents/income/business/freelance/customer/customer-project.document.yml" with content:
+      """yaml
+      covers:
+        - date: 2026-01-05
+          amount: 60.00
+        - date: 2026-02-05
+          amount: 40.00
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout contains:
+      """text
+      Unresolvable Cover Metadata (1):
+      ...
+        documents/income/business/freelance/customer/customer-project.document.yml
+          covers[1] declares income/business/freelance/customer @ 2026-02-05 — no matching required transaction found
       """
 ```
 

@@ -183,6 +183,7 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
             };
 
             covers.push(DocumentCover {
+                location: format!("covers[{i}]"),
                 posting_date,
                 account_path,
                 amount,
@@ -200,6 +201,7 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
             let posting_date = top_level_date.or(default_date);
             let account_path = top_level_account.as_deref().map(|a| a.replace(':', "/"));
             covers.push(DocumentCover {
+                location: "top-level".to_string(),
                 posting_date,
                 account_path,
                 amount: top_level_amount,
