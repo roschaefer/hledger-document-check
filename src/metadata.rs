@@ -16,7 +16,7 @@ impl fmt::Display for DocumentMetadataError {
 
 impl std::error::Error for DocumentMetadataError {}
 
-fn yaml_to_string(v: &serde_yaml::Value) -> Option<String> {
+pub(crate) fn yaml_to_string(v: &serde_yaml::Value) -> Option<String> {
     match v {
         serde_yaml::Value::String(s) => Some(s.clone()),
         serde_yaml::Value::Null => None,
@@ -27,7 +27,9 @@ fn yaml_to_string(v: &serde_yaml::Value) -> Option<String> {
 }
 
 /// Parse a YAML value as a date. Handles both YAML native timestamps and ISO strings.
-fn parse_yaml_date(v: &serde_yaml::Value) -> Result<Option<NaiveDate>, DocumentMetadataError> {
+pub(crate) fn parse_yaml_date(
+    v: &serde_yaml::Value,
+) -> Result<Option<NaiveDate>, DocumentMetadataError> {
     match v {
         serde_yaml::Value::Null => Ok(None),
         serde_yaml::Value::String(s) => {

@@ -12,6 +12,7 @@ mod journal;
 mod matching;
 mod metadata;
 mod model;
+mod redundancy;
 
 use chrono::NaiveDate;
 use clap::{Parser, Subcommand};
