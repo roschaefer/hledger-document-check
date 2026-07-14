@@ -345,6 +345,117 @@ Feature: Metadata can override account matching
       """
 ```
 
+## Wrong Account Metadata
+
+A `covers[].account` override that doesn't match any required transaction is
+silently ignored: matching falls back to the file's own directory/filename
+instead, so the document still gets matched correctly and nothing else
+surfaces the mistake. The `wrong-account-metadata` check flags these declared
+accounts directly, and suggests the file's own location as the likely
+intended value when that location does have a matching transaction. It only
+reports a `warn` by default, so it does not fail the build on its own.
+
+```gherkin
+Feature: Wrong account metadata is flagged
+  A declared account that matches no required transaction is reported, with a
+  suggestion when the file's own location would have matched instead.
+
+  Scenario: A cover account is missing a subaccount segment the folder implies
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                                    ; document_check:exempt
+      account expenses:business:hosting:storage:legacy       ; document_check:required
+
+      2026-01-05 Storage Invoice
+          expenses:business:hosting:storage:legacy           8.94 EUR
+          assets:bank                                        -8.94 EUR
+      """
+    And a file named "documents/expenses/business/hosting/storage/legacy/2026-01-05.pdf" with content:
+      """
+      storage invoice
+      """
+    And a file named "documents/expenses/business/hosting/storage/legacy/2026-01-05.document.yml" with content:
+      """yaml
+      covers:
+        - date: 2026-01-05
+          account: expenses:business:hosting:storage
+          amount: 8.94
+          currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout contains:
+      """text
+      Wrong Account Metadata (1):
+      ...
+        documents/expenses/business/hosting/storage/legacy/2026-01-05.document.yml
+          declares expenses/business/hosting/storage @ 2026-01-05 — no such transaction; the file's location implies expenses/business/hosting/storage/legacy instead
+      """
+
+  Scenario: A cover account matches nothing, with no location-based suggestion either
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank ; document_check:exempt
+      """
+    And a file named "documents/expenses/business/misc/2026-01-01-note.pdf" with content:
+      """
+      note
+      """
+    And a file named "documents/expenses/business/misc/2026-01-01-note.document.yml" with content:
+      """yaml
+      covers:
+        - date: 2026-01-01
+          account: expenses:business:nonexistent
+          amount: 12.00
+          currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files --ignore unmatched-documents"
+    Then the command exits with code 0
+    And stdout contains:
+      """text
+      Wrong Account Metadata (1):
+      ...
+        documents/expenses/business/misc/2026-01-01-note.document.yml
+          declares expenses/business/nonexistent @ 2026-01-01 — no matching required transaction found
+      """
+
+  Scenario: A legitimate account override that resolves to a real transaction is not flagged
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                                      ; document_check:exempt
+      account expenses:insurance:health:base                   ; document_check:required
+      account expenses:insurance:health:nursing-care           ; document_check:required
+
+      2026-01-01 Annual Health Insurance Base
+          expenses:insurance:health:base                       100.00 EUR
+          assets:bank                                         -100.00 EUR
+
+      2026-01-01 Annual Nursing Care Insurance
+          expenses:insurance:health:nursing-care                30.00 EUR
+          assets:bank                                          -30.00 EUR
+      """
+    And a file named "documents/expenses/insurance/health/2026-01-01-annual-notice.pdf" with content:
+      """
+      annual health insurance notice
+      """
+    And a file named "documents/expenses/insurance/health/2026-01-01-annual-notice.document.yml" with content:
+      """yaml
+      covers:
+        - account: expenses:insurance:health:base
+          amount: 100.00
+          currency: EUR
+        - account: expenses:insurance:health:nursing-care
+          amount: 30.00
+          currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout does not contain:
+      """text
+      Wrong Account Metadata
+      """
+```
+
 ## Metadata Schema Validation
 
 Sidecar metadata is validated before it is used for matching. Unknown fields,

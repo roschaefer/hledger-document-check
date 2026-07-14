@@ -29,6 +29,7 @@ amount-mismatches = "fail"
 amount-audit-skips = "ignore"
 missing-document-placeholders = "ignore"
 ambiguous-transaction-groups = "warn"
+wrong-account-metadata = "warn"
 
 [enrich_journal]
 # Prefix written into emitted document: tags.

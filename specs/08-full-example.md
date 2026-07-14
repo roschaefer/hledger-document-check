@@ -77,6 +77,7 @@ Feature: Full repository example
           0 unmatched documents
           0 unexpected files
           0 duplicate groups
+          0 wrong account metadata fields
         Amount Audit:
           0 amount mismatches
           8 linked groups checked

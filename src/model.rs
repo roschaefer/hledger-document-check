@@ -70,6 +70,16 @@ pub struct DuplicateFileGroup {
 }
 
 #[derive(Debug, Clone)]
+pub struct WrongAccountCover {
+    pub path: PathBuf,
+    pub declared_account: String,
+    pub posting_date: NaiveDate,
+    /// The account the file's own location implies, when that account does
+    /// have a matching required transaction (a likely intended value).
+    pub suggested_account: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct PdfAmount {
     pub amount: f64,
     pub currency: Option<String>,

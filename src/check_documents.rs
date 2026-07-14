@@ -2,6 +2,7 @@ use chrono::NaiveDate;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use crate::account_audit::find_wrong_account_metadata;
 use crate::amount_audit::find_amount_mismatches;
 use crate::amounts::document_amount_for_document;
 use crate::comparison::{load_document_journal_diff, DocumentJournalDiff};
@@ -14,7 +15,7 @@ use crate::matching::GroupKey;
 use crate::metadata::metadata_for_document;
 use crate::model::{
     AmountAuditSkip, AmountMismatch, DocumentEntry, DocumentKind, DuplicateFileGroup, PdfAmount,
-    RequiredDocument, TreeIssue, MONEY_TOLERANCE,
+    RequiredDocument, TreeIssue, WrongAccountCover, MONEY_TOLERANCE,
 };
 
 pub const CHECK_INVALID_CONFIGURATION: &str = "invalid-configuration";
@@ -28,6 +29,7 @@ pub const CHECK_AMOUNT_MISMATCHES: &str = "amount-mismatches";
 pub const CHECK_AMOUNT_AUDIT_SKIPS: &str = "amount-audit-skips";
 pub const CHECK_MISSING_DOCUMENT_PLACEHOLDERS: &str = "missing-document-placeholders";
 pub const CHECK_AMBIGUOUS_TRANSACTION_GROUPS: &str = "ambiguous-transaction-groups";
+pub const CHECK_WRONG_ACCOUNT_METADATA: &str = "wrong-account-metadata";
 
 pub const ALL_CHECKS: &[&str] = &[
     CHECK_INVALID_CONFIGURATION,
@@ -41,6 +43,7 @@ pub const ALL_CHECKS: &[&str] = &[
     CHECK_AMOUNT_AUDIT_SKIPS,
     CHECK_MISSING_DOCUMENT_PLACEHOLDERS,
     CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
+    CHECK_WRONG_ACCOUNT_METADATA,
 ];
 
 pub struct CheckArgs {
@@ -67,7 +70,11 @@ fn build_check_policy(args: &CheckArgs) -> Result<HashMap<String, String>, Strin
     ] {
         policy.insert(check.to_string(), "fail".to_string());
     }
-    for check in [CHECK_UNBOOKED_DOCUMENTS, CHECK_AMBIGUOUS_TRANSACTION_GROUPS] {
+    for check in [
+        CHECK_UNBOOKED_DOCUMENTS,
+        CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
+        CHECK_WRONG_ACCOUNT_METADATA,
+    ] {
         policy.insert(check.to_string(), "warn".to_string());
     }
     for check in [
@@ -364,6 +371,8 @@ pub fn run_check(args: CheckArgs) -> i32 {
 
     let duplicate_files = find_duplicate_files(&args.documents);
     let amount_audit = find_amount_mismatches(required_groups, &diff.documents.matched_entries);
+    let wrong_account_metadata =
+        find_wrong_account_metadata(required_groups, &diff.documents.matched_entries);
 
     let unbooked_entries = &diff.documents.unbooked_entries;
     let overdue_unbooked =
@@ -430,6 +439,10 @@ pub fn run_check(args: CheckArgs) -> i32 {
         print_ambiguous(&ambiguous_groups, required_groups);
     }
 
+    if should_report(&policy, CHECK_WRONG_ACCOUNT_METADATA) {
+        print_wrong_account_metadata(&wrong_account_metadata);
+    }
+
     let matched_group_count = required_groups
         .keys()
         .filter(|k| covered_groups.contains(*k))
@@ -447,6 +460,10 @@ pub fn run_check(args: CheckArgs) -> i32 {
     println!("    {} unmatched documents", unmatched_entries.len());
     println!("    {} unexpected files", diff.documents.issues.len());
     println!("    {} duplicate groups", duplicate_files.len());
+    println!(
+        "    {} wrong account metadata fields",
+        wrong_account_metadata.len()
+    );
     println!("  Amount Audit:");
     println!("    {} amount mismatches", amount_audit.mismatches.len());
     println!("    {} linked groups checked", amount_audit.checked_groups);
@@ -522,6 +539,11 @@ pub fn run_check(args: CheckArgs) -> i32 {
             &policy,
             CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
             !ambiguous_groups.is_empty(),
+        ),
+        is_failure(
+            &policy,
+            CHECK_WRONG_ACCOUNT_METADATA,
+            !wrong_account_metadata.is_empty(),
         ),
     ]
     .iter()
@@ -627,6 +649,34 @@ fn print_duplicates(groups: &[DuplicateFileGroup]) {
             println!("  {}", display_path(path));
         }
         println!("    exact file equality");
+    }
+}
+
+fn print_wrong_account_metadata(items: &[WrongAccountCover]) {
+    if items.is_empty() {
+        return;
+    }
+    println!("\nWrong Account Metadata ({}):", items.len());
+    println!(
+        "  A declared account has no matching required transaction; the metadata is probably wrong."
+    );
+    let mut last_path: Option<&Path> = None;
+    for item in items {
+        if last_path != Some(item.path.as_path()) {
+            println!("  {}", display_path(&item.path));
+            last_path = Some(item.path.as_path());
+        }
+        let date = item.posting_date.format("%Y-%m-%d");
+        match &item.suggested_account {
+            Some(suggestion) => println!(
+                "    declares {} @ {date} — no such transaction; the file's location implies {suggestion} instead",
+                item.declared_account
+            ),
+            None => println!(
+                "    declares {} @ {date} — no matching required transaction found",
+                item.declared_account
+            ),
+        }
     }
 }
 

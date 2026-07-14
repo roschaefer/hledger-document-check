@@ -156,6 +156,7 @@ Feature: Full repository example
           0 unmatched documents
           0 unexpected files
           0 duplicate groups
+          0 wrong account metadata fields
         Amount Audit:
           0 amount mismatches
           8 linked groups checked
@@ -280,6 +281,7 @@ Built-in check names:
 - `amount-audit-skips`
 - `missing-document-placeholders`
 - `ambiguous-transaction-groups`
+- `wrong-account-metadata`
 
 ## Configuration
 
@@ -319,6 +321,7 @@ Feature: Initial configuration
       amount-audit-skips = "ignore"
       missing-document-placeholders = "ignore"
       ambiguous-transaction-groups = "warn"
+      wrong-account-metadata = "warn"
 
       [enrich_journal]
       # Prefix written into emitted document: tags.
