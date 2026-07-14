@@ -324,7 +324,7 @@ Feature: Initial configuration
       missing-document-placeholders = "ignore"
       ambiguous-transaction-groups = "warn"
       redundant-metadata = "warn"
-      unresolvable-cover-metadata = "warn"
+      unresolvable-cover-metadata = "fail"
 
       [enrich_journal]
       # Prefix written into emitted document: tags.

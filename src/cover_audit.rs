@@ -33,22 +33,29 @@ fn sidecar_path(path: &Path) -> PathBuf {
 /// carried by) the file's own directory/filename identity instead, and the
 /// mistake never surfaces anywhere else in the tool's output.
 ///
-/// A cover that asserts nothing beyond the file's own location (its account
-/// equals the directory and its date equals the filename) is skipped even
-/// when it fails to resolve — that's just an unmatched document, already
-/// covered by the `unmatched-documents` check, not a metadata mistake.
+/// Two kinds of cover are skipped even when they fail to resolve, because
+/// they're an `unmatched-documents` concern rather than a metadata mistake:
+/// - a cover that asserts nothing beyond the file's own location (its
+///   account equals the directory and its date equals the filename), and
+/// - any cover on a document that has no resolved groups at all — i.e. the
+///   whole entry is unmatched (`matched_groups_by_entry[entry]` is empty).
+///   Reporting per-cover mistakes there would just duplicate the
+///   file-level "this document isn't linked to anything" finding.
 pub fn find_unresolvable_covers(
     required_groups: &HashMap<GroupKey, Vec<RequiredDocument>>,
-    matched_entries: &[DocumentEntry],
+    matched_groups_by_entry: &HashMap<DocumentEntry, Vec<GroupKey>>,
 ) -> Vec<UnresolvableCover> {
     let mut results = Vec::new();
 
-    for entry in matched_entries {
+    for (entry, groups) in matched_groups_by_entry {
         if !matches!(
             entry.kind,
             DocumentKind::MatchedPdf | DocumentKind::MissingMetadata
         ) {
             continue;
+        }
+        if groups.is_empty() {
+            continue; // the whole document is unmatched; owned by unmatched-documents instead
         }
         let Ok(Some(metadata)) = metadata_for_document(&entry.path) else {
             continue;
@@ -104,10 +111,23 @@ pub fn find_unresolvable_covers(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::matching::matched_groups_for_entry;
     use tempfile::TempDir;
 
     fn nd(y: i32, m: u32, d: u32) -> NaiveDate {
         NaiveDate::from_ymd_opt(y, m, d).unwrap()
+    }
+
+    /// Mirrors what `build_document_journal_diff` computes in production, so
+    /// tests exercise the real resolution logic instead of hand-rolling it.
+    fn matched_groups_by_entry(
+        entries: &[DocumentEntry],
+        required_groups: &HashMap<GroupKey, Vec<RequiredDocument>>,
+    ) -> HashMap<DocumentEntry, Vec<GroupKey>> {
+        entries
+            .iter()
+            .map(|e| (e.clone(), matched_groups_for_entry(e, required_groups)))
+            .collect()
     }
 
     fn make_required(account: &str, date: NaiveDate) -> RequiredDocument {
@@ -175,7 +195,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let results = find_unresolvable_covers(&required_groups, &[entry]);
+        let matched = matched_groups_by_entry(&[entry], &required_groups);
+        let results = find_unresolvable_covers(&required_groups, &matched);
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].location, "covers[0]");
@@ -215,7 +236,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let results = find_unresolvable_covers(&required_groups, &[entry]);
+        let matched = matched_groups_by_entry(&[entry], &required_groups);
+        let results = find_unresolvable_covers(&required_groups, &matched);
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].location, "top-level");
@@ -252,7 +274,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let results = find_unresolvable_covers(&required_groups, &[entry]);
+        let matched = matched_groups_by_entry(&[entry], &required_groups);
+        let results = find_unresolvable_covers(&required_groups, &matched);
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].declared_date, nd(2024, 1, 6));
@@ -295,7 +318,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let results = find_unresolvable_covers(&required_groups, &[entry]);
+        let matched = matched_groups_by_entry(&[entry], &required_groups);
+        let results = find_unresolvable_covers(&required_groups, &matched);
 
         assert!(results.is_empty());
     }
@@ -323,13 +347,17 @@ mod tests {
         .into_iter()
         .collect();
 
-        let results = find_unresolvable_covers(&required_groups, &[entry]);
+        let matched = matched_groups_by_entry(&[entry], &required_groups);
+        let results = find_unresolvable_covers(&required_groups, &matched);
 
         assert!(results.is_empty());
     }
 
     #[test]
-    fn flags_wrong_cover_without_a_suggestion_when_neither_key_resolves() {
+    fn does_not_flag_a_wrong_cover_when_the_whole_entry_is_unmatched() {
+        // A non-trivial wrong cover on a document that doesn't resolve at all
+        // (via this cover or any fallback) used to also show up here,
+        // duplicating the unmatched-documents finding for the same file.
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path().join("expenses/business/software");
         std::fs::create_dir_all(&dir).unwrap();
@@ -343,10 +371,10 @@ mod tests {
         let entry = make_entry(pdf, "expenses/business/software", Some(nd(2026, 1, 1)));
         let required_groups: HashMap<GroupKey, Vec<RequiredDocument>> = HashMap::new();
 
-        let results = find_unresolvable_covers(&required_groups, &[entry]);
+        let matched = matched_groups_by_entry(&[entry], &required_groups);
+        let results = find_unresolvable_covers(&required_groups, &matched);
 
-        assert_eq!(results.len(), 1);
-        assert!(results[0].suggested.is_none());
+        assert!(results.is_empty());
     }
 
     #[test]
@@ -364,7 +392,8 @@ mod tests {
         let entry = make_entry(pdf, "expenses/business/software", Some(nd(2026, 1, 1)));
         let required_groups: HashMap<GroupKey, Vec<RequiredDocument>> = HashMap::new();
 
-        let results = find_unresolvable_covers(&required_groups, &[entry]);
+        let matched = matched_groups_by_entry(&[entry], &required_groups);
+        let results = find_unresolvable_covers(&required_groups, &matched);
 
         assert!(results.is_empty());
     }
@@ -385,7 +414,8 @@ mod tests {
         let entry = make_entry(pdf, "expenses/business/software", Some(nd(2026, 1, 1)));
         let required_groups: HashMap<GroupKey, Vec<RequiredDocument>> = HashMap::new();
 
-        let results = find_unresolvable_covers(&required_groups, &[entry]);
+        let matched = matched_groups_by_entry(&[entry], &required_groups);
+        let results = find_unresolvable_covers(&required_groups, &matched);
 
         assert!(results.is_empty());
     }
@@ -417,7 +447,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let results = find_unresolvable_covers(&required_groups, &[entry]);
+        let matched = matched_groups_by_entry(&[entry], &required_groups);
+        let results = find_unresolvable_covers(&required_groups, &matched);
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].location, "covers[1]");

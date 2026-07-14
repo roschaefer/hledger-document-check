@@ -70,6 +70,7 @@ fn build_check_policy(args: &CheckArgs) -> Result<HashMap<String, String>, Strin
         CHECK_UNEXPECTED_FILES,
         CHECK_DUPLICATE_FILES,
         CHECK_AMOUNT_MISMATCHES,
+        CHECK_UNRESOLVABLE_COVER_METADATA,
     ] {
         policy.insert(check.to_string(), "fail".to_string());
     }
@@ -77,7 +78,6 @@ fn build_check_policy(args: &CheckArgs) -> Result<HashMap<String, String>, Strin
         CHECK_UNBOOKED_DOCUMENTS,
         CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
         CHECK_REDUNDANT_METADATA,
-        CHECK_UNRESOLVABLE_COVER_METADATA,
     ] {
         policy.insert(check.to_string(), "warn".to_string());
     }
@@ -377,7 +377,7 @@ pub fn run_check(args: CheckArgs) -> i32 {
     let amount_audit = find_amount_mismatches(required_groups, &diff.documents.matched_entries);
     let redundant_metadata = find_redundant_metadata(&args.documents);
     let unresolvable_covers =
-        find_unresolvable_covers(required_groups, &diff.documents.matched_entries);
+        find_unresolvable_covers(required_groups, &diff.matched_groups_by_entry);
 
     let unbooked_entries = &diff.documents.unbooked_entries;
     let overdue_unbooked =

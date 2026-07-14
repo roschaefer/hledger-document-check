@@ -495,11 +495,18 @@ carried by) the file's own directory/filename identity instead, so the
 document can still end up matched correctly and nothing else surfaces the
 mistake. The `unresolvable-cover-metadata` check flags these covers
 directly, and suggests the file's own location as the likely intended value
-when that location does have a matching transaction. A cover that asserts
-nothing beyond the file's own location is never flagged this way even when it
-resolves to nothing — that's just an unmatched document, already reported by
-`unmatched-documents`. This check only reports a `warn` by default, so it
-does not fail the build on its own.
+when that location does have a matching transaction. There's no legitimate
+reason for a cover to resolve to nothing — every real use (redundant
+restatement, an account/date override, a multi-installment document) points
+at a transaction that actually exists — so this check fails the build by
+default, the same as `unmatched-documents`.
+
+Two kinds of cover are never flagged this way even when they resolve to
+nothing: one that asserts nothing beyond the file's own location (that's
+`redundant-metadata`'s job to clean up, not a mistake), and any cover on a
+document that has no resolved groups at all — that document is entirely
+unmatched, already reported once by `unmatched-documents` instead of once
+per bad cover.
 
 ```gherkin
 Feature: Unresolvable cover metadata is flagged
@@ -530,7 +537,7 @@ Feature: Unresolvable cover metadata is flagged
           currency: EUR
       """
     When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
-    Then the command exits with code 0
+    Then the command exits with code 1
     And stdout contains:
       """text
       Unresolvable Cover Metadata (1):
@@ -561,7 +568,7 @@ Feature: Unresolvable cover metadata is flagged
           currency: EUR
       """
     When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
-    Then the command exits with code 0
+    Then the command exits with code 1
     And stdout contains:
       """text
       Unresolvable Cover Metadata (1):
@@ -591,7 +598,7 @@ Feature: Unresolvable cover metadata is flagged
       currency: EUR
       """
     When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
-    Then the command exits with code 0
+    Then the command exits with code 1
     And stdout contains:
       """text
       Unresolvable Cover Metadata (1):
@@ -600,7 +607,7 @@ Feature: Unresolvable cover metadata is flagged
           top-level declares expenses/business/hosting/aws @ 2022-06-04 — no such transaction; the file's location implies expenses/business/hosting/aws @ 2022-06-03 instead
       """
 
-  Scenario: A cover matches nothing, with no location-based suggestion either
+  Scenario: A non-trivial wrong cover on a fully-unmatched document is not double-reported
     Given a file named "journal.journal" with content:
       """hledger
       account assets:bank ; document_check:exempt
@@ -617,14 +624,15 @@ Feature: Unresolvable cover metadata is flagged
           amount: 12.00
           currency: EUR
       """
-    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files --ignore unmatched-documents"
-    Then the command exits with code 0
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 1
     And stdout contains:
       """text
-      Unresolvable Cover Metadata (1):
-      ...
-        documents/expenses/business/misc/2026-01-01-note.document.yml
-          covers[0] declares expenses/business/nonexistent @ 2026-01-01 — no matching required transaction found
+      Unmatched Documents (1):
+      """
+    And stdout does not contain:
+      """text
+      Unresolvable Cover Metadata
       """
 
   Scenario: A legitimate account override that resolves to a real transaction is not flagged
@@ -743,7 +751,7 @@ Feature: Unresolvable cover metadata is flagged
           amount: 40.00
       """
     When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
-    Then the command exits with code 0
+    Then the command exits with code 1
     And stdout contains:
       """text
       Unresolvable Cover Metadata (1):
