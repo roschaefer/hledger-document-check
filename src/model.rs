@@ -69,6 +69,14 @@ pub struct DuplicateFileGroup {
     pub paths: Vec<PathBuf>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RedundantMetadataField {
+    pub path: PathBuf,
+    pub location: String,
+    pub field: &'static str,
+    pub value: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct WrongAccountCover {
     pub path: PathBuf,

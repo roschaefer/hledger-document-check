@@ -345,6 +345,148 @@ Feature: Metadata can override account matching
       """
 ```
 
+## Redundant Metadata
+
+A `covers[].date`/`covers[].account` (or the top-level shorthand `date`/`account`)
+that exactly matches what the file's own location already implies — the
+filename date and the account folder — is redundant: removing it changes
+nothing about how the document matches. The `redundant-metadata` check finds
+these fields so they can be deleted. It only reports a `warn` by default, so it
+does not fail the build on its own.
+
+```gherkin
+Feature: Redundant metadata fields are flagged
+  Explicit date/account values that duplicate the file's own location are
+  reported so they can be removed.
+
+  Scenario: A covers entry repeats the filename date and folder account
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                          ; document_check:exempt
+      account expenses:business:hosting:uberspace  ; document_check:required
+
+      2026-01-05 Uberspace Hosting
+          expenses:business:hosting:uberspace      4.00 EUR
+          assets:bank                             -4.00 EUR
+      """
+    And a file named "documents/expenses/business/hosting/uberspace/2026-01-05-invoice.pdf" with content:
+      """
+      uberspace invoice
+      """
+    And a file named "documents/expenses/business/hosting/uberspace/2026-01-05-invoice.document.yml" with content:
+      """yaml
+      covers:
+        - date: 2026-01-05
+          account: expenses:business:hosting:uberspace
+          amount: 4.00
+          currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout contains:
+      """text
+      Redundant Metadata Fields (2):
+      ...
+        documents/expenses/business/hosting/uberspace/2026-01-05-invoice.document.yml
+          covers[0] date: 2026-01-05
+          covers[0] account: expenses:business:hosting:uberspace
+      """
+
+  Scenario: A top-level shorthand date/account repeats the file's own location
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                     ; document_check:exempt
+      account expenses:business:hosting:aws   ; document_check:required
+
+      2022-06-03 AWS EMEA
+          expenses:business:hosting:aws        2.99 EUR
+          assets:bank                         -2.99 EUR
+      """
+    And a file named "documents/expenses/business/hosting/aws/2022-06-03-invoice.pdf" with content:
+      """
+      aws invoice
+      """
+    And a file named "documents/expenses/business/hosting/aws/2022-06-03-invoice.document.yml" with content:
+      """yaml
+      date: 2022-06-03
+      account: expenses:business:hosting:aws
+      amount: 2.99
+      currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout contains:
+      """text
+      Redundant Metadata Fields (2):
+      ...
+        documents/expenses/business/hosting/aws/2022-06-03-invoice.document.yml
+          top-level date: 2022-06-03
+          top-level account: expenses:business:hosting:aws
+      """
+
+  Scenario: An account override that names a different account is not flagged
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                                      ; document_check:exempt
+      account expenses:insurance:health:base                   ; document_check:required
+      account expenses:insurance:health:nursing-care           ; document_check:required
+
+      2026-01-01 Annual Health Insurance Base
+          expenses:insurance:health:base                       100.00 EUR
+          assets:bank                                         -100.00 EUR
+
+      2026-01-01 Annual Nursing Care Insurance
+          expenses:insurance:health:nursing-care                30.00 EUR
+          assets:bank                                          -30.00 EUR
+      """
+    And a file named "documents/expenses/insurance/health/2026-01-01-annual-notice.pdf" with content:
+      """
+      annual health insurance notice
+      """
+    And a file named "documents/expenses/insurance/health/2026-01-01-annual-notice.document.yml" with content:
+      """yaml
+      covers:
+        - account: expenses:insurance:health:base
+          amount: 100.00
+          currency: EUR
+        - account: expenses:insurance:health:nursing-care
+          amount: 30.00
+          currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout does not contain:
+      """text
+      Redundant Metadata Fields
+      """
+
+  Scenario: A sidecar with only amount and currency is not flagged
+    Given a file named "journal.journal" with content:
+      """hledger
+      account assets:bank                    ; document_check:exempt
+      account expenses:business:software     ; document_check:required
+
+      2026-01-01 Software Suite
+          expenses:business:software          92.00 EUR
+          assets:bank                        -92.00 EUR
+      """
+    And a file named "documents/expenses/business/software/2026-01-01-suite.pdf" with content:
+      """
+      suite invoice
+      """
+    And a file named "documents/expenses/business/software/2026-01-01-suite.document.yml" with content:
+      """yaml
+      amount: 92.00
+      currency: EUR
+      """
+    When I run "hledger document-check check --journal journal.journal --documents documents --ignore duplicate-files"
+    Then the command exits with code 0
+    And stdout does not contain:
+      """text
+      Redundant Metadata Fields
+      """
+```
+
 ## Wrong Account Metadata
 
 A `covers[].account` override that doesn't match any required transaction is

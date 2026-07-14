@@ -1,9 +1,5 @@
 covers:
-  - date: 2026-05-03
-    account: Expenses:Business:Unclear-document-currency
-    amount: 10.00
+  - amount: 10.00
     currency: EUR
-  - date: 2026-05-03
-    account: Expenses:Business:Unclear-document-currency
-    amount: 10.00
+  - amount: 10.00
     currency: USD

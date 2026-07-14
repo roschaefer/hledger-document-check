@@ -15,8 +15,9 @@ use crate::matching::GroupKey;
 use crate::metadata::metadata_for_document;
 use crate::model::{
     AmountAuditSkip, AmountMismatch, DocumentEntry, DocumentKind, DuplicateFileGroup, PdfAmount,
-    RequiredDocument, TreeIssue, WrongAccountCover, MONEY_TOLERANCE,
+    RedundantMetadataField, RequiredDocument, TreeIssue, WrongAccountCover, MONEY_TOLERANCE,
 };
+use crate::redundancy::find_redundant_metadata;
 
 pub const CHECK_INVALID_CONFIGURATION: &str = "invalid-configuration";
 pub const CHECK_MISSING_DOCUMENT_COVERAGE: &str = "missing-document-coverage";
@@ -29,6 +30,7 @@ pub const CHECK_AMOUNT_MISMATCHES: &str = "amount-mismatches";
 pub const CHECK_AMOUNT_AUDIT_SKIPS: &str = "amount-audit-skips";
 pub const CHECK_MISSING_DOCUMENT_PLACEHOLDERS: &str = "missing-document-placeholders";
 pub const CHECK_AMBIGUOUS_TRANSACTION_GROUPS: &str = "ambiguous-transaction-groups";
+pub const CHECK_REDUNDANT_METADATA: &str = "redundant-metadata";
 pub const CHECK_WRONG_ACCOUNT_METADATA: &str = "wrong-account-metadata";
 
 pub const ALL_CHECKS: &[&str] = &[
@@ -43,6 +45,7 @@ pub const ALL_CHECKS: &[&str] = &[
     CHECK_AMOUNT_AUDIT_SKIPS,
     CHECK_MISSING_DOCUMENT_PLACEHOLDERS,
     CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
+    CHECK_REDUNDANT_METADATA,
     CHECK_WRONG_ACCOUNT_METADATA,
 ];
 
@@ -73,6 +76,7 @@ fn build_check_policy(args: &CheckArgs) -> Result<HashMap<String, String>, Strin
     for check in [
         CHECK_UNBOOKED_DOCUMENTS,
         CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
+        CHECK_REDUNDANT_METADATA,
         CHECK_WRONG_ACCOUNT_METADATA,
     ] {
         policy.insert(check.to_string(), "warn".to_string());
@@ -371,6 +375,7 @@ pub fn run_check(args: CheckArgs) -> i32 {
 
     let duplicate_files = find_duplicate_files(&args.documents);
     let amount_audit = find_amount_mismatches(required_groups, &diff.documents.matched_entries);
+    let redundant_metadata = find_redundant_metadata(&args.documents);
     let wrong_account_metadata =
         find_wrong_account_metadata(required_groups, &diff.documents.matched_entries);
 
@@ -439,6 +444,10 @@ pub fn run_check(args: CheckArgs) -> i32 {
         print_ambiguous(&ambiguous_groups, required_groups);
     }
 
+    if should_report(&policy, CHECK_REDUNDANT_METADATA) {
+        print_redundant_metadata(&redundant_metadata);
+    }
+
     if should_report(&policy, CHECK_WRONG_ACCOUNT_METADATA) {
         print_wrong_account_metadata(&wrong_account_metadata);
     }
@@ -460,6 +469,7 @@ pub fn run_check(args: CheckArgs) -> i32 {
     println!("    {} unmatched documents", unmatched_entries.len());
     println!("    {} unexpected files", diff.documents.issues.len());
     println!("    {} duplicate groups", duplicate_files.len());
+    println!("    {} redundant metadata fields", redundant_metadata.len());
     println!(
         "    {} wrong account metadata fields",
         wrong_account_metadata.len()
@@ -539,6 +549,11 @@ pub fn run_check(args: CheckArgs) -> i32 {
             &policy,
             CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
             !ambiguous_groups.is_empty(),
+        ),
+        is_failure(
+            &policy,
+            CHECK_REDUNDANT_METADATA,
+            !redundant_metadata.is_empty(),
         ),
         is_failure(
             &policy,
@@ -649,6 +664,22 @@ fn print_duplicates(groups: &[DuplicateFileGroup]) {
             println!("  {}", display_path(path));
         }
         println!("    exact file equality");
+    }
+}
+
+fn print_redundant_metadata(items: &[RedundantMetadataField]) {
+    if items.is_empty() {
+        return;
+    }
+    println!("\nRedundant Metadata Fields ({}):", items.len());
+    println!("  These fields already match what the file's location implies and can be removed.");
+    let mut last_path: Option<&Path> = None;
+    for item in items {
+        if last_path != Some(item.path.as_path()) {
+            println!("  {}", display_path(&item.path));
+            last_path = Some(item.path.as_path());
+        }
+        println!("    {} {}: {}", item.location, item.field, item.value);
     }
 }
 
