@@ -189,8 +189,10 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
         }
     } else {
         // No `covers` array. If top-level cover-like fields exist, synthesize a single cover.
-        let has_cover_fields =
-            top_level_date.is_some() || top_level_account.is_some() || get("description").is_some();
+        let has_cover_fields = top_level_date.is_some()
+            || top_level_account.is_some()
+            || top_level_amount.is_some()
+            || get("description").is_some();
 
         if has_cover_fields {
             let posting_date = top_level_date.or(default_date);
@@ -367,6 +369,27 @@ mod tests {
             Some("Expenses/Business/Hosting/AWS")
         );
         assert_eq!(loaded.covers[0].amount, Some(2.99));
+        assert_eq!(loaded.covers[0].currency.as_deref(), Some("EUR"));
+    }
+
+    #[test]
+    fn metadata_top_level_amount_alone_synthesises_cover() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().join("expenses/business/domains");
+        std::fs::create_dir_all(&dir).unwrap();
+        let meta = write(
+            &dir,
+            "2026-03-01-domain-a.document.yml",
+            "amount: 4.00\ncurrency: EUR\n",
+        );
+        let loaded = load_document_metadata(&meta).unwrap();
+        assert_eq!(loaded.covers.len(), 1);
+        assert_eq!(
+            loaded.covers[0].posting_date,
+            Some(NaiveDate::from_ymd_opt(2026, 3, 1).unwrap())
+        );
+        assert!(loaded.covers[0].account_path.is_none());
+        assert_eq!(loaded.covers[0].amount, Some(4.00));
         assert_eq!(loaded.covers[0].currency.as_deref(), Some("EUR"));
     }
 
