@@ -22,7 +22,7 @@ toml = "0.8"
 walkdir = "2"
 
 [dev-dependencies]
-cucumber = { version = "0.21", features = ["macros"] }
+cucumber = { version = "0.23", features = ["macros"] }
 tempfile = "3"
 tokio = { version = "1", features = ["macros", "process", "rt-multi-thread", "time"] }
 
