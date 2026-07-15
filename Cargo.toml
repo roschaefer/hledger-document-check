@@ -26,6 +26,9 @@ cucumber = { version = "0.23", features = ["macros"] }
 tempfile = "3"
 tokio = { version = "1", features = ["macros", "process", "rt-multi-thread", "time"] }
 
+[build-dependencies]
+markdown-to-cucumber = { git = "https://github.com/roschaefer/markdown-to-cucumber.git", branch = "main" }
+
 [[test]]
 name = "cucumber"
 harness = false

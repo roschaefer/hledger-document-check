@@ -17,8 +17,10 @@ documents on disk.
 - `src/config.rs`: `hledger-document-check.toml` loading/writing
 - `src/model.rs`: shared types
 - `specs/`: Markdown specifications; fenced `gherkin` blocks are compiled into
-  cucumber features at build time by `build.rs` (see `tests/cucumber.rs` for
-  step definitions)
+  cucumber features at build time by `build.rs`, via the shared
+  [markdown-to-cucumber](https://github.com/roschaefer/markdown-to-cucumber)
+  crate (see `tests/cucumber.rs` for step definitions, which stay local to
+  this crate)
 - `example/`: runnable example journal, documents, and Fava integration
 
 Keep real journals and documents outside this repository.

@@ -729,6 +729,7 @@ dependencies = [
  "clap",
  "cucumber",
  "fancy-regex",
+ "markdown-to-cucumber",
  "pdf-extract",
  "regex",
  "serde",
@@ -904,6 +905,11 @@ dependencies = [
  "ttf-parser",
  "weezl",
 ]
+
+[[package]]
+name = "markdown-to-cucumber"
+version = "0.1.0"
+source = "git+https://github.com/roschaefer/markdown-to-cucumber.git?branch=main#24285266e3913da89cf837d308d9aca8f7eb4e3d"
 
 [[package]]
 name = "md-5"
