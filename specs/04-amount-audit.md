@@ -8,6 +8,9 @@ The amount can come from a parsed PDF total or from `*.document.yml`. Metadata i
 preferred when a PDF is hard to parse, when the bank transaction is already
 converted into another currency, or when one document covers multiple groups.
 
+Invoices typically show positive amounts, so the audit ignores sign and compares
+magnitude only, refunds don't need a negative `amount`.
+
 ## Warning Cases
 
 Some linked groups cannot be audited. By default these skip reasons are only
