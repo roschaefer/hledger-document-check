@@ -1,5 +1,6 @@
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use crate::model::{DuplicateFileGroup, METADATA_SUFFIX};
@@ -30,7 +31,14 @@ fn iter_document_files(root: &Path) -> Vec<PathBuf> {
 fn file_digest(path: &Path) -> Option<Vec<u8>> {
     let mut hasher = Sha256::new();
     let mut file = std::fs::File::open(path).ok()?;
-    std::io::copy(&mut file, &mut hasher).ok()?;
+    let mut buffer = [0; 8192];
+    loop {
+        let read = file.read(&mut buffer).ok()?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
     Some(hasher.finalize().to_vec())
 }
 
