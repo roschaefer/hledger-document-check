@@ -11,6 +11,6 @@ on:
 
 jobs:
   pr-metadata:
-    uses: roschaefer/reusable-workflows/.github/workflows/pr-metadata.yml@19d39d9f3ad2c4fc7965add1ffd5bdba47385d9e # main
+    uses: roschaefer/reusable-workflows/.github/workflows/pr-metadata.yml@23f29aaad0a8b73e4513d3e8340cdace14a08d6e # main
     permissions:
       pull-requests: read
