@@ -6,9 +6,8 @@ on:
 
 jobs:
   ci:
-    uses: roschaefer/reusable-workflows/.github/workflows/rust-ci.yml@main
+    uses: roschaefer/reusable-workflows/.github/workflows/rust-ci.yml@9338650d07d31c7d08ab422f7162a3839cae8803 # main
     with:
       binary_name: hledger-document-check
       needs_hledger: true
       needs_fava: true
-    secrets: inherit

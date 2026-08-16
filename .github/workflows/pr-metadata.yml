@@ -11,5 +11,4 @@ on:
 
 jobs:
   pr-metadata:
-    uses: roschaefer/reusable-workflows/.github/workflows/pr-metadata.yml@main
-    secrets: inherit
+    uses: roschaefer/reusable-workflows/.github/workflows/pr-metadata.yml@9338650d07d31c7d08ab422f7162a3839cae8803 # main
