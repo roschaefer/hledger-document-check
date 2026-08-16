@@ -6,7 +6,9 @@ on:
 
 jobs:
   ci:
-    uses: roschaefer/reusable-workflows/.github/workflows/rust-ci.yml@9338650d07d31c7d08ab422f7162a3839cae8803 # main
+    uses: roschaefer/reusable-workflows/.github/workflows/rust-ci.yml@bb93bad5ab1cc573b8d0b24ef0b569efdc18d1b3 # main
+    permissions:
+      contents: write
     with:
       binary_name: hledger-document-check
       needs_hledger: true
