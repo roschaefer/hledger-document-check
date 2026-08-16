@@ -6,7 +6,7 @@ on:
 
 jobs:
   ci:
-    uses: roschaefer/reusable-workflows/.github/workflows/rust-ci.yml@bb93bad5ab1cc573b8d0b24ef0b569efdc18d1b3 # main
+    uses: roschaefer/reusable-workflows/.github/workflows/rust-ci.yml@19d39d9f3ad2c4fc7965add1ffd5bdba47385d9e # main
     permissions:
       contents: write
     with:
