@@ -1070,7 +1070,7 @@ dependencies = [
 [[package]]
 name = "markdown-to-cucumber"
 version = "0.1.0"
-source = "git+https://github.com/roschaefer/markdown-to-cucumber.git?branch=main#a3390b5d757d7f2ac26bc37ee9ff75d10a545747"
+source = "git+https://github.com/roschaefer/markdown-to-cucumber.git?branch=main#b8c81b60875cd48fba18119da781bea02178d770"
 
 [[package]]
 name = "md-5"
