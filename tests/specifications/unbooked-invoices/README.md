@@ -21,7 +21,20 @@ Unbooked documents are visible while waiting for the ledger transaction.
 ### A paid online invoice exists before the bank transaction clears
 
 ```scrut
-$ build_scenario scenario_a_paid_online_invoice_exists_before_the_bank_transaction_clears
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                         ; document_check:exempt
+> account expenses:business:hosting:aws       ; document_check:required
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/aws/unbooked/invoice.pdf <<'EOF'
+> AWS invoice waiting for bank clearing
+> EOF
 ```
 
 ```scrut
@@ -60,7 +73,26 @@ OK.
 ### A sent invoice exists before the customer pays
 
 ```scrut
-$ build_scenario scenario_a_sent_invoice_exists_before_the_customer_pays
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/unbooked/invoice.pdf <<'EOF'
+> customer invoice waiting for payment
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/unbooked/invoice.document.yml <<'EOF'
+> due_date: 2026-05-31
+> EOF
 ```
 
 ```scrut
@@ -113,7 +145,28 @@ When multiple transactions match an unbooked document no move suggestion is prin
 ### An unbooked document has no move suggestion when multiple transactions match
 
 ```scrut
-$ build_scenario scenario_an_unbooked_document_has_no_move_suggestion_when_multiple_transactions_match
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                     ; document_check:exempt
+> account expenses:business:hosting:aws   ; document_check:required
+>
+> 2026-01-02 AWS Invoice A
+>     expenses:business:hosting:aws   12.34 EUR
+>     assets:bank                    -12.34 EUR
+>
+> 2026-01-02 AWS Invoice B
+>     expenses:business:hosting:aws   12.34 EUR
+>     assets:bank                    -12.34 EUR
+> EOF
+```
+
+```scrut
+$ write_pdf documents/expenses/business/hosting/aws/unbooked/invoice.pdf <<'EOF'
+> 12.34 EUR
+> EOF
 ```
 
 ```scrut
@@ -164,15 +217,177 @@ Summary:
 [1]
 ```
 
-The unique-match move behavior is exercised by the
-[unique-match move example](#a-matching-transaction-appears-for-an-unbooked-document-with-a-sidecar-amount).
+A unique unbooked document match produces an explicit rename suggestion.
+
+### A matching transaction appears after an unbooked document was filed
+
+```scrut
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                         ; document_check:exempt
+> account expenses:business:hosting:aws       ; document_check:required
+>
+> 2026-01-02 AWS Invoice
+>     expenses:business:hosting:aws   12.34 EUR
+>     assets:bank                    -12.34 EUR
+> EOF
+```
+
+The amount is read from the PDF text:
+
+```scrut
+$ write_pdf documents/expenses/business/hosting/aws/unbooked/invoice.pdf <<'EOF'
+> Amount Due 12.34 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/aws/unbooked/invoice.document.yml <<'EOF'
+> due_date: 2026-01-31
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/aws/unbooked/invoice/usage.csv <<'EOF'
+> line,item
+> EOF
+```
+
+On 2026-01-15 the invoice is not due yet, so it is unbooked but not overdue:
+
+```scrut
+$ hledger-document-check check --journal journal.journal --documents documents --today 2026-01-15 --ignore amount-audit-skips --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
+
+Missing Document Coverage (1):
+  2026-01-02  AWS Invoice
+    account: expenses:business:hosting:aws
+    amount: 12.34 EUR
+
+Unbooked Documents (1):
+  documents/expenses/business/hosting/aws/unbooked/invoice.pdf
+    amount: 12.34 EUR
+
+Suggested Moves (1):
+  High-confidence unbooked document matches by account, amount, and currency.
+  2026-01-02  AWS Invoice
+    account: expenses:business:hosting:aws
+    amount: 12.34 EUR
+    mv {working_directory}/documents/expenses/business/hosting/aws/unbooked/invoice.pdf {working_directory}/documents/expenses/business/hosting/aws/2026-01-02-invoice.pdf
+    mv {working_directory}/documents/expenses/business/hosting/aws/unbooked/invoice.document.yml {working_directory}/documents/expenses/business/hosting/aws/2026-01-02-invoice.document.yml
+    mv {working_directory}/documents/expenses/business/hosting/aws/unbooked/invoice {working_directory}/documents/expenses/business/hosting/aws/2026-01-02-invoice
+
+Summary:
+  Coverage:
+    0/1 transaction groups covered
+    0 missing-document placeholders
+  Open Items:
+    1 missing document coverage
+    1 unbooked documents
+    0 overdue unbooked documents
+    0 unmatched documents
+    0 unexpected files
+    0 duplicate groups
+    0 redundant metadata fields
+    0 unresolvable cover metadata fields
+  Amount Audit:
+    0 amount mismatches
+    0 linked groups checked
+    0 linked groups skipped
+    Skip Reasons:
+      0 document amount unreadable
+      0 document currencies unclear
+      0 transaction amount missing
+      0 transaction currencies mixed
+      0 document/transaction currency mismatch
+[1]
+```
+
+After the suggested moves, the invoice has a corresponding transaction, so it
+is not overdue even after its due date:
+
+```scrut
+$ mv documents/expenses/business/hosting/aws/unbooked/invoice.pdf documents/expenses/business/hosting/aws/2026-01-02-invoice.pdf
+```
+
+```scrut
+$ mv documents/expenses/business/hosting/aws/unbooked/invoice.document.yml documents/expenses/business/hosting/aws/2026-01-02-invoice.document.yml
+```
+
+```scrut
+$ mv documents/expenses/business/hosting/aws/unbooked/invoice documents/expenses/business/hosting/aws/2026-01-02-invoice
+```
+
+```scrut
+$ hledger-document-check check --journal journal.journal --documents documents --today 2026-02-15 --ignore amount-audit-skips --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
+
+Summary:
+  Coverage:
+    1/1 transaction groups covered
+    0 missing-document placeholders
+  Open Items:
+    0 missing document coverage
+    0 unbooked documents
+    0 overdue unbooked documents
+    0 unmatched documents
+    0 unexpected files
+    0 duplicate groups
+    0 redundant metadata fields
+    0 unresolvable cover metadata fields
+  Amount Audit:
+    0 amount mismatches
+    1 linked groups checked
+    0 linked groups skipped
+    Skip Reasons:
+      0 document amount unreadable
+      0 document currencies unclear
+      0 transaction amount missing
+      0 transaction currencies mixed
+      0 document/transaction currency mismatch
+OK.
+```
+
 
 Metadata can supply the amount for an unbooked document whose PDF amount is not readable.
 
 ### A matching transaction appears for an unbooked document with a sidecar amount
 
 ```scrut
-$ build_scenario scenario_a_matching_transaction_appears_for_an_unbooked_document_with_a_sidecar_amount
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                   ; document_check:exempt
+> account expenses:business:transport:train:flixtrain   ; document_check:required
+>
+> 2026-06-10 FlixTrain
+>     expenses:business:transport:train:flixtrain   14.99 EUR
+>     assets:bank                                  -14.99 EUR
+> EOF
+```
+
+```scrut
+$ write_pdf documents/expenses/business/transport/train/flixtrain/unbooked/booking.pdf <<'EOF'
+> Ticket/Invoice for your reservation
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/transport/train/flixtrain/unbooked/booking.document.yml <<'EOF'
+> covers:
+>   - amount: 14.99
+>     currency: EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/transport/train/flixtrain/unbooked/booking/usage.csv <<'EOF'
+> date,distance_km
+> 2026-06-10,450
+> EOF
 ```
 
 ```scrut

@@ -27,7 +27,113 @@ Amount audit explains why a linked group could not be compared.
 ### Every amount-audit skip reason is reported
 
 ```scrut
-$ build_scenario scenario_every_amount_audit_skip_reason_is_reported
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                      ; document_check:exempt
+> account expenses:business:unreadable-document            ; document_check:required
+> account expenses:business:unclear-document-currency      ; document_check:required
+> account expenses:business:missing-transaction-amount     ; document_check:required
+> account expenses:business:mixed-transaction-currencies   ; document_check:required
+> account expenses:business:currency-mismatch              ; document_check:required
+>
+> 2026-01-02 Unreadable Document Amount
+>     expenses:business:unreadable-document                 10.00 EUR
+>     assets:bank                                          -10.00 EUR
+>
+> 2026-01-03 Unclear Document Currency
+>     expenses:business:unclear-document-currency           10.00 EUR
+>     assets:bank                                          -10.00 EUR
+>
+> 2026-01-04 Missing Transaction Amount
+>     expenses:business:missing-transaction-amount
+>
+> 2026-01-05 Mixed Transaction Currencies
+>     expenses:business:mixed-transaction-currencies        10.00 EUR
+>     assets:bank                                          -10.00 EUR
+>     expenses:business:mixed-transaction-currencies        12.00 USD
+>     assets:paypal                                        -12.00 USD
+>
+> 2026-01-06 Currency Mismatch
+>     expenses:business:currency-mismatch                   10.00 EUR
+>     assets:bank                                          -10.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/unreadable-document/2026-01-02-unreadable.pdf <<'EOF'
+> no parseable total in this fake pdf
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/unclear-document-currency/2026-01-03-unclear.pdf <<'EOF'
+> unclear currency metadata example
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/missing-transaction-amount/2026-01-04-missing-amount.pdf <<'EOF'
+> missing transaction amount metadata example
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/mixed-transaction-currencies/2026-01-05-mixed.pdf <<'EOF'
+> mixed transaction currencies metadata example
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/currency-mismatch/2026-01-06-usd-invoice.pdf <<'EOF'
+> currency mismatch metadata example
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/unclear-document-currency/2026-01-03-unclear.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-03
+>     account: expenses:business:unclear-document-currency
+>     amount: 10.00
+>     currency: EUR
+>   - date: 2026-01-03
+>     account: expenses:business:unclear-document-currency
+>     amount: 10.00
+>     currency: USD
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/missing-transaction-amount/2026-01-04-missing-amount.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-04
+>     account: expenses:business:missing-transaction-amount
+>     amount: 10.00
+>     currency: EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/mixed-transaction-currencies/2026-01-05-mixed.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-05
+>     account: expenses:business:mixed-transaction-currencies
+>     amount: 22.00
+>     currency: EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/currency-mismatch/2026-01-06-usd-invoice.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-06
+>     account: expenses:business:currency-mismatch
+>     amount: 10.00
+>     currency: USD
+> EOF
 ```
 
 ```scrut
@@ -110,7 +216,24 @@ Skip reasons can be promoted to failures.
 ### Parsed amount warnings can be made fatal
 
 ```scrut
-$ build_scenario scenario_parsed_amount_warnings_can_be_made_fatal
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                          ; document_check:exempt
+> account expenses:business:hosting            ; document_check:required
+>
+> 2026-01-02 Hosting Provider
+>     expenses:business:hosting                 10.00 EUR
+>     assets:bank                              -10.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/2026-01-02-hosting.pdf <<'EOF'
+> fake pdf without a readable amount
+> EOF
 ```
 
 ```scrut
@@ -158,7 +281,34 @@ Metadata supplies the auditable amount when the PDF total is not the ledger amou
 ### A foreign-currency invoice is audited with the converted bank amount
 
 ```scrut
-$ build_scenario scenario_a_foreign_currency_invoice_is_audited_with_the_converted_bank_amount
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                       ; document_check:exempt
+> account expenses:business:cloud           ; document_check:required
+>
+> 2026-01-04 Cloud Provider
+>     expenses:business:cloud                92.00 EUR
+>     assets:bank                           -92.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/cloud/2026-01-04-cloud.pdf <<'EOF'
+> invoice total 100.00 USD, bank booked converted amount
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/cloud/2026-01-04-cloud.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-04
+>     account: expenses:business:cloud
+>     amount: 92.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -206,7 +356,34 @@ A clear metadata amount must match the linked transaction amount.
 ### Metadata amount differs from the transaction amount
 
 ```scrut
-$ build_scenario scenario_metadata_amount_differs_from_the_transaction_amount
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                       ; document_check:exempt
+> account expenses:business:software        ; document_check:required
+>
+> 2026-01-03 Software Suite
+>     expenses:business:software             70.00 EUR
+>     assets:bank                           -70.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-03-suite.pdf <<'EOF'
+> software suite invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-03-suite.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-03
+>     account: expenses:business:software
+>     amount: 100.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut

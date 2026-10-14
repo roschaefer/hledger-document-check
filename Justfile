@@ -15,9 +15,9 @@ run *args="":
 test:
     cargo test
 
-test-scrut:
+test-scrut *paths="README.md tests/specifications":
     cargo build
-    PATH="$(realpath "${CARGO_TARGET_DIR:-target}/debug"):$PATH" scrut test tests/specifications
+    PATH="$(realpath "${CARGO_TARGET_DIR:-target}/debug"):$PATH" scrut test {{paths}}
 
 fmt:
     cargo fmt --all

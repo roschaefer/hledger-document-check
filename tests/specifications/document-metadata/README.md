@@ -65,7 +65,43 @@ A document metadata file can connect one invoice to several required postings.
 ### A customer pays one invoice in two rates
 
 ```scrut
-$ build_scenario scenario_a_customer_pays_one_invoice_in_two_rates
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+>
+> 2026-01-05 Customer Payment Rate 1
+>     assets:bank                                      60.00 EUR
+>     income:business:freelance:customer
+>
+> 2026-02-05 Customer Payment Rate 2
+>     assets:bank                                      40.00 EUR
+>     income:business:freelance:customer
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.pdf <<'EOF'
+> customer project invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
+> amount: 100.00
+> currency: EUR
+>
+> covers:
+>   - date: 2026-01-05
+>     account: income:business:freelance:customer
+>     amount: 60.00
+>   - date: 2026-02-05
+>     account: income:business:freelance:customer
+>     amount: 40.00
+> EOF
 ```
 
 ```scrut
@@ -106,7 +142,43 @@ OK.
 ### Cover amounts must add up to the document total when total is configured
 
 ```scrut
-$ build_scenario scenario_cover_amounts_must_add_up_to_the_document_total_when_total_is_configured
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+>
+> 2026-01-05 Customer Payment Rate 1
+>     assets:bank                                      60.00 EUR
+>     income:business:freelance:customer
+>
+> 2026-02-05 Customer Payment Rate 2
+>     assets:bank                                      30.00 EUR
+>     income:business:freelance:customer
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.pdf <<'EOF'
+> customer project invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
+> amount: 100.00
+> currency: EUR
+>
+> covers:
+>   - date: 2026-01-05
+>     account: income:business:freelance:customer
+>     amount: 60.00
+>   - date: 2026-02-05
+>     account: income:business:freelance:customer
+>     amount: 30.00
+> EOF
 ```
 
 ```scrut
@@ -164,7 +236,54 @@ Several invoice files can connect to the same required posting group.
 ### A customer pays two invoices at once
 
 ```scrut
-$ build_scenario scenario_a_customer_pays_two_invoices_at_once
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+>
+> 2026-03-01 Customer Batch Payment
+>     assets:bank                                     100.00 EUR
+>     income:business:freelance:customer
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-03-01-invoice-a.pdf <<'EOF'
+> invoice a
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-03-01-invoice-b.pdf <<'EOF'
+> invoice b
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-03-01-invoice-a.document.yml <<'EOF'
+> amount: 40.00
+> currency: EUR
+>
+> covers:
+>   - date: 2026-03-01
+>     account: income:business:freelance:customer
+>     amount: 40.00
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-03-01-invoice-b.document.yml <<'EOF'
+> amount: 60.00
+> currency: EUR
+>
+> covers:
+>   - date: 2026-03-01
+>     account: income:business:freelance:customer
+>     amount: 60.00
+> EOF
 ```
 
 ```scrut
@@ -208,7 +327,54 @@ OK.
 ### Cover amounts must add up to the transaction amount
 
 ```scrut
-$ build_scenario scenario_cover_amounts_must_add_up_to_the_transaction_amount
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+>
+> 2026-03-01 Customer Batch Payment
+>     assets:bank                                     100.00 EUR
+>     income:business:freelance:customer
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-03-01-invoice-a.pdf <<'EOF'
+> invoice a
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-03-01-invoice-b.pdf <<'EOF'
+> invoice b
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-03-01-invoice-a.document.yml <<'EOF'
+> amount: 40.00
+> currency: EUR
+>
+> covers:
+>   - date: 2026-03-01
+>     account: income:business:freelance:customer
+>     amount: 40.00
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-03-01-invoice-b.document.yml <<'EOF'
+> amount: 50.00
+> currency: EUR
+>
+> covers:
+>   - date: 2026-03-01
+>     account: income:business:freelance:customer
+>     amount: 50.00
+> EOF
 ```
 
 ```scrut
@@ -267,7 +433,54 @@ Metadata can resolve several invoices for the same account and date.
 ### Two same-date invoices cover one same-date transaction group
 
 ```scrut
-$ build_scenario scenario_two_same_date_invoices_cover_one_same_date_transaction_group
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                         ; document_check:exempt
+> account expenses:business:domains           ; document_check:required
+>
+> 2026-03-01 Domain A
+>     expenses:business:domains                4.00 EUR
+>     assets:bank                             -4.00 EUR
+>
+> 2026-03-01 Domain B
+>     expenses:business:domains                6.00 EUR
+>     assets:bank                             -6.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/domains/2026-03-01-domain-a.pdf <<'EOF'
+> domain a
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/domains/2026-03-01-domain-b.pdf <<'EOF'
+> domain b
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/domains/2026-03-01-domain-a.document.yml <<'EOF'
+> covers:
+>   - date: 2026-03-01
+>     account: expenses:business:domains
+>     amount: 4.00
+>     currency: EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/domains/2026-03-01-domain-b.document.yml <<'EOF'
+> covers:
+>   - date: 2026-03-01
+>     account: expenses:business:domains
+>     amount: 6.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -320,7 +533,43 @@ A document filed in one folder can cover postings in several subaccounts.
 ### One annual health-insurance notice covers several subaccounts
 
 ```scrut
-$ build_scenario scenario_one_annual_health_insurance_notice_covers_several_subaccounts
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                      ; document_check:exempt
+> account expenses:insurance:health:base                   ; document_check:required
+> account expenses:insurance:health:nursing-care           ; document_check:required
+>
+> 2026-01-01 Annual Health Insurance Base
+>     expenses:insurance:health:base                       100.00 EUR
+>     assets:bank                                         -100.00 EUR
+>
+> 2026-01-01 Annual Nursing Care Insurance
+>     expenses:insurance:health:nursing-care                30.00 EUR
+>     assets:bank                                          -30.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/insurance/health/2026-01-01-annual-notice.pdf <<'EOF'
+> annual health insurance notice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/insurance/health/2026-01-01-annual-notice.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-01
+>     account: expenses:insurance:health:base
+>     amount: 100.00
+>     currency: EUR
+>   - date: 2026-01-01
+>     account: expenses:insurance:health:nursing-care
+>     amount: 30.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -373,7 +622,34 @@ reported so they can be removed.
 ### A covers entry repeats the filename date and folder account
 
 ```scrut
-$ build_scenario scenario_a_covers_entry_repeats_the_filename_date_and_folder_account
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                          ; document_check:exempt
+> account expenses:business:hosting:uberspace  ; document_check:required
+>
+> 2026-01-05 Uberspace Hosting
+>     expenses:business:hosting:uberspace      4.00 EUR
+>     assets:bank                             -4.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/uberspace/2026-01-05-invoice.pdf <<'EOF'
+> uberspace invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/uberspace/2026-01-05-invoice.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-05
+>     account: expenses:business:hosting:uberspace
+>     amount: 4.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -414,7 +690,33 @@ OK.
 ### A top-level shorthand date/account repeats the file's own location
 
 ```scrut
-$ build_scenario scenario_a_top_level_shorthand_date_account_repeats_the_file_s_own_location
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                     ; document_check:exempt
+> account expenses:business:hosting:aws   ; document_check:required
+>
+> 2022-06-03 AWS EMEA
+>     expenses:business:hosting:aws        2.99 EUR
+>     assets:bank                         -2.99 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/aws/2022-06-03-invoice.pdf <<'EOF'
+> aws invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/aws/2022-06-03-invoice.document.yml <<'EOF'
+> date: 2022-06-03
+> account: expenses:business:hosting:aws
+> amount: 2.99
+> currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -455,7 +757,41 @@ OK.
 ### An account override that names a different account is not flagged
 
 ```scrut
-$ build_scenario scenario_an_account_override_that_names_a_different_account_is_not_flagged
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                      ; document_check:exempt
+> account expenses:insurance:health:base                   ; document_check:required
+> account expenses:insurance:health:nursing-care           ; document_check:required
+>
+> 2026-01-01 Annual Health Insurance Base
+>     expenses:insurance:health:base                       100.00 EUR
+>     assets:bank                                         -100.00 EUR
+>
+> 2026-01-01 Annual Nursing Care Insurance
+>     expenses:insurance:health:nursing-care                30.00 EUR
+>     assets:bank                                          -30.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/insurance/health/2026-01-01-annual-notice.pdf <<'EOF'
+> annual health insurance notice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/insurance/health/2026-01-01-annual-notice.document.yml <<'EOF'
+> covers:
+>   - account: expenses:insurance:health:base
+>     amount: 100.00
+>     currency: EUR
+>   - account: expenses:insurance:health:nursing-care
+>     amount: 30.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -490,7 +826,31 @@ OK.
 ### A sidecar with only amount and currency is not flagged
 
 ```scrut
-$ build_scenario scenario_a_sidecar_with_only_amount_and_currency_is_not_flagged
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                    ; document_check:exempt
+> account expenses:business:software     ; document_check:required
+>
+> 2026-01-01 Software Suite
+>     expenses:business:software          92.00 EUR
+>     assets:bank                        -92.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-suite.pdf <<'EOF'
+> suite invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-suite.document.yml <<'EOF'
+> amount: 92.00
+> currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -550,7 +910,34 @@ matched instead.
 ### A cover account is missing a subaccount segment the folder implies
 
 ```scrut
-$ build_scenario scenario_a_cover_account_is_missing_a_subaccount_segment_the_folder_implies
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                    ; document_check:exempt
+> account expenses:business:hosting:storage:legacy       ; document_check:required
+>
+> 2026-01-05 Storage Invoice
+>     expenses:business:hosting:storage:legacy           8.94 EUR
+>     assets:bank                                        -8.94 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/storage/legacy/2026-01-05.pdf <<'EOF'
+> storage invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/storage/legacy/2026-01-05.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-05
+>     account: expenses:business:hosting:storage
+>     amount: 8.94
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -595,7 +982,33 @@ Summary:
 ### A cover date doesn't match when the document was actually posted
 
 ```scrut
-$ build_scenario scenario_a_cover_date_doesn_t_match_when_the_document_was_actually_posted
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                            ; document_check:exempt
+> account expenses:business:hosting:mailbox      ; document_check:required
+>
+> 2024-01-05 Mailbox Invoice
+>     expenses:business:hosting:mailbox          8.94 EUR
+>     assets:bank                                -8.94 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/mailbox/2024-01-05-invoice-1234.pdf <<'EOF'
+> mailbox invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/mailbox/2024-01-05-invoice-1234.document.yml <<'EOF'
+> covers:
+>   - date: 2024-01-06
+>     amount: 8.94
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -635,7 +1048,32 @@ Summary:
 ### A mistake in the top-level shorthand form is labeled top-level, not covers[N]
 
 ```scrut
-$ build_scenario scenario_a_mistake_in_the_top_level_shorthand_form_is_labeled_top_level_not_covers_n
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                     ; document_check:exempt
+> account expenses:business:hosting:aws   ; document_check:required
+>
+> 2022-06-03 AWS EMEA
+>     expenses:business:hosting:aws        2.99 EUR
+>     assets:bank                         -2.99 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/aws/2022-06-03-invoice.pdf <<'EOF'
+> aws invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/aws/2022-06-03-invoice.document.yml <<'EOF'
+> date: 2022-06-04
+> amount: 2.99
+> currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -675,7 +1113,29 @@ Summary:
 ### A non-trivial wrong cover on a fully-unmatched document is not double-reported
 
 ```scrut
-$ build_scenario scenario_a_non_trivial_wrong_cover_on_a_fully_unmatched_document_is_not_double_reported
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank ; document_check:exempt
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/misc/2026-01-01-note.pdf <<'EOF'
+> note
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/misc/2026-01-01-note.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-01
+>     account: expenses:business:nonexistent
+>     amount: 12.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -719,7 +1179,41 @@ Summary:
 ### A legitimate account override that resolves to a real transaction is not flagged
 
 ```scrut
-$ build_scenario scenario_a_legitimate_account_override_that_resolves_to_a_real_transaction_is_not_flagged
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                      ; document_check:exempt
+> account expenses:insurance:health:base                   ; document_check:required
+> account expenses:insurance:health:nursing-care           ; document_check:required
+>
+> 2026-01-01 Annual Health Insurance Base
+>     expenses:insurance:health:base                       100.00 EUR
+>     assets:bank                                         -100.00 EUR
+>
+> 2026-01-01 Annual Nursing Care Insurance
+>     expenses:insurance:health:nursing-care                30.00 EUR
+>     assets:bank                                          -30.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/insurance/health/2026-01-01-annual-notice.pdf <<'EOF'
+> annual health insurance notice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/insurance/health/2026-01-01-annual-notice.document.yml <<'EOF'
+> covers:
+>   - account: expenses:insurance:health:base
+>     amount: 100.00
+>     currency: EUR
+>   - account: expenses:insurance:health:nursing-care
+>     amount: 30.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -754,7 +1248,33 @@ OK.
 ### A legitimate date override that resolves to a real transaction is not flagged
 
 ```scrut
-$ build_scenario scenario_a_legitimate_date_override_that_resolves_to_a_real_transaction_is_not_flagged
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                            ; document_check:exempt
+> account expenses:business:hosting:mailbox      ; document_check:required
+>
+> 2024-01-20 Mailbox Invoice Cleared
+>     expenses:business:hosting:mailbox          8.94 EUR
+>     assets:bank                                -8.94 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/mailbox/2024-01-05-invoice-1234.pdf <<'EOF'
+> mailbox invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/mailbox/2024-01-05-invoice-1234.document.yml <<'EOF'
+> covers:
+>   - date: 2024-01-20
+>     amount: 8.94
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -789,7 +1309,30 @@ OK.
 ### A trivial cover on a genuinely unmatched document is not double-reported
 
 ```scrut
-$ build_scenario scenario_a_trivial_cover_on_a_genuinely_unmatched_document_is_not_double_reported
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                        ; document_check:exempt
+> account expenses:business:software         ; document_check:required
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-suite.pdf <<'EOF'
+> suite invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-suite.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-01
+>     account: expenses:business:software
+>     amount: 92.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut
@@ -834,7 +1377,34 @@ Summary:
 ### One wrong cover among several on an otherwise-matched multi-installment document
 
 ```scrut
-$ build_scenario scenario_one_wrong_cover_among_several_on_an_otherwise_matched_multi_installment_document
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+>
+> 2026-01-05 Customer Payment Rate 1
+>     assets:bank                                      60.00 EUR
+>     income:business:freelance:customer
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.pdf <<'EOF'
+> customer project invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
+> covers:
+>   - date: 2026-01-05
+>     amount: 60.00
+>   - date: 2026-02-05
+>     amount: 40.00
+> EOF
 ```
 
 ```scrut
@@ -883,7 +1453,26 @@ Invalid document metadata is rejected instead of being silently ignored.
 ### A metadata sidecar with an unknown field is rejected
 
 ```scrut
-$ build_scenario scenario_a_metadata_sidecar_with_an_unknown_field_is_rejected
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank ; document_check:exempt
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-suite.pdf <<'EOF'
+> suite invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-suite.document.yml <<'EOF'
+> amount: 100.00
+> unexpected: true
+> EOF
 ```
 
 ```scrut
@@ -925,7 +1514,52 @@ Summary:
 ### Metadata notes can contain arbitrary text or structured data
 
 ```scrut
-$ build_scenario scenario_metadata_notes_can_contain_arbitrary_text_or_structured_data
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                         ; document_check:exempt
+> account expenses:business:software          ; document_check:required
+>
+> 2026-01-01 Software Suite
+>     expenses:business:software              92.00 EUR
+>     assets:bank                            -92.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-suite.pdf <<'EOF'
+> software suite invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-text-note.pdf <<'EOF'
+> text-only notes document
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-text-note.document.yml <<'EOF'
+> notes: "Keep until the yearly review is done."
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-suite.document.yml <<'EOF'
+> amount: 92.00
+> currency: EUR
+> description: Software Suite
+> notes:
+>   reason: "Bank converted the foreign-currency charge"
+>   source_lines:
+>     - "invoice total: 100.00 USD"
+>     - "charged amount: 92.00 EUR"
+> covers:
+>   - amount: 92.00
+>     description: Software Suite
+> EOF
 ```
 
 ```scrut
@@ -955,4 +1589,69 @@ Summary:
       0 transaction currencies mixed
       0 document/transaction currency mismatch
 OK.
+```
+
+A sidecar is metadata about a document, so it cannot stand on its own.
+
+### A metadata file without a matching document is reported
+
+```scrut
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                         ; document_check:exempt
+> account expenses:business:software          ; document_check:required
+>
+> 2026-01-01 Software Suite
+>     expenses:business:software              92.00 EUR
+>     assets:bank                            -92.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-01-suite.pdf <<'EOF'
+> software suite invoice
+> EOF
+```
+
+The sidecar's date does not match the PDF, so it describes no document:
+
+```scrut
+$ write_file documents/expenses/business/software/2026-01-02-text-note.document.yml <<'EOF'
+> notes: "Keep until the yearly review is done."
+> EOF
+```
+
+```scrut
+$ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
+
+Unexpected Files (1):
+  documents/expenses/business/software/2026-01-02-text-note.document.yml  [metadata file has no matching document PDF; use YYYY-MM-DD-missing.document.yml for missing documents]
+
+Summary:
+  Coverage:
+    1/1 transaction groups covered
+    0 missing-document placeholders
+  Open Items:
+    0 missing document coverage
+    0 unbooked documents
+    0 overdue unbooked documents
+    0 unmatched documents
+    1 unexpected files
+    0 duplicate groups
+    0 redundant metadata fields
+    0 unresolvable cover metadata fields
+  Amount Audit:
+    0 amount mismatches
+    0 linked groups checked
+    1 linked groups skipped
+    Skip Reasons:
+      1 document amount unreadable
+      0 document currencies unclear
+      0 transaction amount missing
+      0 transaction currencies mixed
+      0 document/transaction currency mismatch
+[1]
 ```

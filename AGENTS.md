@@ -17,7 +17,8 @@ documents on disk.
 - `src/config.rs`: `hledger-document-check.toml` loading/writing
 - `src/model.rs`: shared types
 - `tests/specifications/`: executable Scrut specifications; each chapter
-  directory has a reusable `setup.bash` and uses `README.md` for its document
+  directory uses `README.md` for its document, with scenario inputs written
+  inline by the helpers in `readme-setup.sh`; `README.md` is a Scrut document too
 - `example/`: runnable example journal, documents, and Fava integration
 
 Keep real journals and documents outside this repository.

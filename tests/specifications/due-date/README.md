@@ -27,7 +27,26 @@ Unbooked documents become failures once they are overdue.
 ### A sent invoice is not yet due
 
 ```scrut
-$ build_scenario scenario_a_sent_invoice_is_not_yet_due
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/unbooked/invoice.pdf <<'EOF'
+> customer invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/unbooked/invoice.document.yml <<'EOF'
+> due_date: 2026-05-31
+> EOF
 ```
 
 ```scrut
@@ -66,7 +85,26 @@ OK.
 ### A due sent invoice without a transaction fails
 
 ```scrut
-$ build_scenario scenario_a_due_sent_invoice_without_a_transaction_fails
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/unbooked/invoice.pdf <<'EOF'
+> overdue customer invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/unbooked/invoice.document.yml <<'EOF'
+> due_date: 2026-04-15
+> EOF
 ```
 
 ```scrut
@@ -111,7 +149,35 @@ Summary:
 ### A due sent invoice with a matching transaction is OK
 
 ```scrut
-$ build_scenario scenario_a_due_sent_invoice_with_a_matching_transaction_is_ok
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+>
+> 2026-04-20 Customer Payment
+>     assets:bank                                     100.00 EUR
+>     income:business:freelance:customer
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-04-20-invoice.pdf <<'EOF'
+> customer invoice already paid
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/2026-04-20-invoice.document.yml <<'EOF'
+> due_date: 2026-04-15
+> covers:
+>   - date: 2026-04-20
+>     account: income:business:freelance:customer
+>     amount: 100.00
+>     currency: EUR
+> EOF
 ```
 
 ```scrut

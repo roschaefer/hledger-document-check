@@ -54,7 +54,26 @@ A derived journal can expose matched documents to Fava.
 ### Enriched journal emits document tags for matched documents
 
 ```scrut
-$ build_scenario scenario_enriched_journal_emits_document_tags_for_matched_documents
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                         ; document_check:exempt
+> account expenses:business:hosting           ; document_check:required
+>
+> 2026-01-02 Hosting Provider
+>     ; document:2026-01-02-hosting.document.yml
+>     ; document:2026-01-02-existing.pdf
+>     expenses:business:hosting                10.00 EUR
+>     assets:bank                             -10.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/2026-01-02-hosting.pdf <<'EOF'
+> hosting invoice
+> EOF
 ```
 
 ```scrut
@@ -88,7 +107,24 @@ Enriched journal output can include absolute document paths for non-Fava consume
 ### Enriched journal emits document tags with an absolute root
 
 ```scrut
-$ build_scenario scenario_enriched_journal_emits_document_tags_with_an_absolute_root
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                         ; document_check:exempt
+> account expenses:business:hosting           ; document_check:required
+>
+> 2026-01-02 Hosting Provider
+>     expenses:business:hosting                10.00 EUR
+>     assets:bank                             -10.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/2026-01-02-hosting.pdf <<'EOF'
+> hosting invoice
+> EOF
 ```
 
 ```scrut

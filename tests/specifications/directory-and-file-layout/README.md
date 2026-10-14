@@ -21,7 +21,24 @@ Account folders and date-prefixed files provide the default document match.
 ### A dated file in the account folder covers the required posting
 
 ```scrut
-$ build_scenario scenario_a_dated_file_in_the_account_folder_covers_the_required_posting
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                    ; document_check:exempt
+> account expenses:business:hosting      ; document_check:required
+>
+> 2026-01-02 Hosting Provider
+>     expenses:business:hosting        10.00 EUR
+>     assets:bank                     -10.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/2026-01-02-hosting.pdf <<'EOF'
+> hosting receipt
+> EOF
 ```
 
 ```scrut
@@ -72,7 +89,35 @@ A dated missing-document placeholder covers a required posting when the document
 ### A missing-document placeholder documents the reason with notes
 
 ```scrut
-$ build_scenario scenario_a_missing_document_placeholder_documents_the_reason_with_notes
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                    ; document_check:exempt
+> account expenses:business:hosting      ; document_check:required
+> account expenses:business:banking      ; document_check:required
+>
+> 2026-01-02 Hosting Provider
+>     expenses:business:hosting        10.00 EUR
+>     assets:bank                     -10.00 EUR
+>
+> 2026-01-06 Bank Fee
+>     expenses:business:banking         3.00 EUR
+>     assets:bank                      -3.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/2026-01-02-hosting.pdf <<'EOF'
+> hosting receipt
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/banking/2026-01-06-missing.document.yml <<'EOF'
+> notes: "Bank statement never arrived; requested a reissue from the bank on 2026-01-08."
+> EOF
 ```
 
 ```scrut
@@ -116,7 +161,31 @@ Supporting files are stored below the matched document stem.
 ### Supporting files live below a sibling directory named after the document
 
 ```scrut
-$ build_scenario scenario_supporting_files_live_below_a_sibling_directory_named_after_the_document
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                    ; document_check:exempt
+> account expenses:business:hosting      ; document_check:required
+>
+> 2026-01-02 Hosting Provider
+>     expenses:business:hosting        10.00 EUR
+>     assets:bank                     -10.00 EUR
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/2026-01-02-hosting.pdf <<'EOF'
+> hosting receipt
+> EOF
+```
+
+```scrut
+$ write_file documents/expenses/business/hosting/2026-01-02-hosting/utilization.csv <<'EOF'
+> project,hours
+> client-a,4
+> EOF
 ```
 
 ```scrut

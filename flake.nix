@@ -39,6 +39,8 @@
           };
       in
       {
+        packages.scrut = scrut;
+
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.git
@@ -52,13 +54,9 @@
             pkgs.fava
             pkgs.hledger
             pkgs.just
+            pkgs.python3
             scrut
           ];
-
-          shellHook = ''
-            repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-            export PATH="$repo_root/target/debug:$PATH"
-          '';
         };
       });
 }
