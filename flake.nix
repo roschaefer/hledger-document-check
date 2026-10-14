@@ -48,6 +48,8 @@
             pkgs.clippy
             pkgs.cargo-audit
             pkgs.cargo-machete
+            pkgs.curl
+            pkgs.fava
             pkgs.hledger
             pkgs.just
             scrut

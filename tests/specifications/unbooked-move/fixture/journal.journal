@@ -1,6 +1,0 @@
-account assets:bank                         ; document_check:exempt
-account expenses:business:hosting:aws       ; document_check:required
-
-2026-01-02 AWS Invoice
-    expenses:business:hosting:aws   12.34 EUR
-    assets:bank                    -12.34 EUR

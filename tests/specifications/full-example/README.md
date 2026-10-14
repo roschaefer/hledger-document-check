@@ -99,3 +99,57 @@ Summary:
       1 document/transaction currency mismatch
 OK.
 ```
+
+## The generated Fava project exposes linked documents
+
+The example can build a sidecar-free document tree and a Beancount journal
+whose `document:` tags point into that tree. Fava then serves the generated
+project, including its document browser.
+
+```scrut
+$ build_scenario scenario_full_example
+```
+
+```scrut
+$ example/rebuild-fava-inputs.sh
+```
+
+```scrut
+$ hledger-document-check enrich-journal --journal example/journal.journal --documents example/documents --document-tag-root "$PWD/example/.generated/fava/documents" | hledger -f - print -O beancount >> example/.generated/fava/example.beancount
+```
+
+The generated journal contains both the document root and absolute document
+tags:
+
+```scrut
+$ grep -F 'option "documents"' example/.generated/fava/example.beancount | sed "s|$PWD|{working_directory}|g"
+option "documents" "{working_directory}/example/.generated/fava/documents"
+```
+
+```scrut
+$ grep -F '2026-01-02-hosting.pdf' example/.generated/fava/example.beancount | sed "s|$PWD|{working_directory}|g"
+    document: "{working_directory}/example/.generated/fava/documents/Expenses/Business/Hosting/2026-01-02-hosting.pdf, 2026-01-02-existing.pdf"
+    ; document:{working_directory}/example/.generated/fava/documents/Expenses/Business/Hosting/2026-01-02-hosting.pdf
+```
+
+Only the document itself is copied; its document-check metadata is not part of
+the tree served by Fava:
+
+```scrut
+$ find example/.generated/fava/documents/Expenses/Business/Cloud -maxdepth 1 -type f -printf '%f\n' | sort
+2026-01-04-cloud.pdf
+```
+
+```scrut
+$ fava --port 5123 example/.generated/fava/example.beancount >/dev/null 2>&1 & fava_pid=$!
+```
+
+```scrut
+$ until curl --fail --silent --max-time 2 http://localhost:5123/beancount/documents/ >/dev/null; do sleep 0.1; done
+```
+
+<!--
+```scrut
+$ kill "$fava_pid"; wait "$fava_pid" || true
+```
+-->
