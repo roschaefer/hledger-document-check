@@ -6,7 +6,7 @@ on:
 
 jobs:
   ci:
-    uses: roschaefer/reusable-workflows/.github/workflows/rust-ci.yml@81a1a8ada0ebe2b8fb491b2a86a58baa86b98939 # main
+    uses: roschaefer/reusable-workflows/.github/workflows/rust-ci.yml@d3b131a1ff531eefbaeda8cd384f43073d1120a1 # main
     permissions:
       contents: write
     with:
@@ -14,16 +14,4 @@ jobs:
       platforms: '["linux-x86_64","macos-arm64"]'
       needs_hledger: true
       needs_fava: true
-
-  scrut:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-
-      - uses: DeterminateSystems/nix-installer-action@2cb76beab460be7e44442c7ebdcbc30b638416df # main
-      - uses: DeterminateSystems/magic-nix-cache-action@f69a2d3e148e90223fe63ab6e3f6331f2e7e33dc # main
-
-      - name: Run Scrut behavior tests
-        run: nix develop --command just test-scrut
+      needs_scrut: true

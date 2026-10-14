@@ -137,10 +137,10 @@ cargo build --release
 # binary is at target/release/hledger-document-check
 ```
 
-Run all tests (unit + integration):
+Run the Rust tests:
 
 ```bash
-cargo test
+just test
 ```
 
 ## Core Concepts
