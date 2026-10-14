@@ -194,6 +194,7 @@ Suggested Moves (1):
     amount: 14.99 EUR
     mv {working_directory}/documents/expenses/business/transport/train/flixtrain/unbooked/booking.pdf {working_directory}/documents/expenses/business/transport/train/flixtrain/2026-06-10-booking.pdf
     mv {working_directory}/documents/expenses/business/transport/train/flixtrain/unbooked/booking.document.yml {working_directory}/documents/expenses/business/transport/train/flixtrain/2026-06-10-booking.document.yml
+    mv {working_directory}/documents/expenses/business/transport/train/flixtrain/unbooked/booking {working_directory}/documents/expenses/business/transport/train/flixtrain/2026-06-10-booking
 
 Summary:
   Coverage:

@@ -76,4 +76,9 @@ covers:
   - amount: 14.99
     currency: EUR
 SCENARIO_A_MATCHING_TRANSACTION_APPEARS_FOR_AN_UNBOOKED_DOCUMENT_WITH_A_SIDECAR_AMOUNT_2
+  mkdir -p "$scenario_dir/documents/expenses/business/transport/train/flixtrain/unbooked/booking"
+  cat >"$scenario_dir/documents/expenses/business/transport/train/flixtrain/unbooked/booking/usage.csv" <<'SCENARIO_A_MATCHING_TRANSACTION_APPEARS_FOR_AN_UNBOOKED_DOCUMENT_WITH_A_SIDECAR_AMOUNT_3'
+date,distance_km
+2026-06-10,450
+SCENARIO_A_MATCHING_TRANSACTION_APPEARS_FOR_AN_UNBOOKED_DOCUMENT_WITH_A_SIDECAR_AMOUNT_3
 }

@@ -57,7 +57,7 @@
 
           shellHook = ''
             repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-            export PATH="$repo_root/hledger-document-check/target/debug:$PATH"
+            export PATH="$repo_root/target/debug:$PATH"
           '';
         };
       });
