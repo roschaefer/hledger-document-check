@@ -219,9 +219,8 @@ cargo test --test cucumber
 ```
 
 Direct [Scrut](https://github.com/facebookincubator/scrut) end-to-end
-transcripts live in [`tests/specifications/`](./tests/specifications/). Inside
-the Nix development shell, run all tests with `just test-all`; use
-`just test-scrut` to run only those transcripts.
+transcripts live in [`tests/specifications/`](./tests/specifications/). Run
+them with `just test-scrut` inside the Nix development shell.
 
 Specs:
 
