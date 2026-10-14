@@ -65,7 +65,7 @@ filename is the only missing-document marker.
 
 The placeholder does not need to stay empty. Add a `notes` key to record why the
 document is missing — the same field documented for regular document metadata in
-[03-document-metadata.md](03-document-metadata.md#metadata-schema-validation).
+[Metadata Schema Validation](../document-metadata/#metadata-schema-validation).
 
 A dated missing-document placeholder covers a required posting when the document itself is unavailable.
 

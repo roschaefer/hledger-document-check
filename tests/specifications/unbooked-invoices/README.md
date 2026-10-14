@@ -165,7 +165,7 @@ Summary:
 ```
 
 The unique-match move behavior is exercised by the
-[unbooked-move Scrut transcript](../tests/specifications/unbooked-move/).
+[unique-match move example](#a-matching-transaction-appears-for-an-unbooked-document-with-a-sidecar-amount).
 
 Metadata can supply the amount for an unbooked document whose PDF amount is not readable.
 

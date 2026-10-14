@@ -141,15 +141,5 @@ $ find example/.generated/fava/documents/Expenses/Business/Cloud -maxdepth 1 -ty
 ```
 
 ```scrut
-$ fava --port 5123 example/.generated/fava/example.beancount >/dev/null 2>&1 & fava_pid=$!
+$ fava_log="$PWD/fava.log"; fava --port 5123 example/.generated/fava/example.beancount >"$fava_log" 2>&1 & fava_pid=$!; trap 'kill "$fava_pid" 2>/dev/null || true; wait "$fava_pid" 2>/dev/null || true' EXIT; timeout 30 bash -c 'until curl --fail --silent --max-time 2 http://localhost:5123/beancount/documents/ >/dev/null; do sleep 0.1; done' || { status=$?; cat "$fava_log"; exit "$status"; }
 ```
-
-```scrut
-$ until curl --fail --silent --max-time 2 http://localhost:5123/beancount/documents/ >/dev/null; do sleep 0.1; done
-```
-
-<!--
-```scrut
-$ kill "$fava_pid"; wait "$fava_pid" || true
-```
--->

@@ -154,7 +154,7 @@ covers:
 SCENARIO_COVER_AMOUNTS_MUST_ADD_UP_TO_THE_TRANSACTION_AMOUNT_4
 }
 
-scenario_two_same_date_invoices_each_cover_one_same_date_transaction() {
+scenario_two_same_date_invoices_cover_one_same_date_transaction_group() {
   local scenario_dir=$1
   mkdir -p "$scenario_dir"
   mkdir -p "$scenario_dir/."
@@ -574,8 +574,11 @@ SCENARIO_METADATA_NOTES_CAN_CONTAIN_ARBITRARY_TEXT_OR_STRUCTURED_DATA_0
   cat >"$scenario_dir/documents/expenses/business/software/2026-01-01-suite.pdf" <<'SCENARIO_METADATA_NOTES_CAN_CONTAIN_ARBITRARY_TEXT_OR_STRUCTURED_DATA_1'
 software suite invoice
 SCENARIO_METADATA_NOTES_CAN_CONTAIN_ARBITRARY_TEXT_OR_STRUCTURED_DATA_1
+  cat >"$scenario_dir/documents/expenses/business/software/2026-01-01-text-note.pdf" <<'SCENARIO_METADATA_NOTES_CAN_CONTAIN_ARBITRARY_TEXT_OR_STRUCTURED_DATA_4'
+text-only notes document
+SCENARIO_METADATA_NOTES_CAN_CONTAIN_ARBITRARY_TEXT_OR_STRUCTURED_DATA_4
   mkdir -p "$scenario_dir/documents/expenses/business/software"
-  cat >"$scenario_dir/documents/expenses/business/software/2026-01-02-text-note.document.yml" <<'SCENARIO_METADATA_NOTES_CAN_CONTAIN_ARBITRARY_TEXT_OR_STRUCTURED_DATA_2'
+  cat >"$scenario_dir/documents/expenses/business/software/2026-01-01-text-note.document.yml" <<'SCENARIO_METADATA_NOTES_CAN_CONTAIN_ARBITRARY_TEXT_OR_STRUCTURED_DATA_2'
 notes: "Keep until the yearly review is done."
 SCENARIO_METADATA_NOTES_CAN_CONTAIN_ARBITRARY_TEXT_OR_STRUCTURED_DATA_2
   mkdir -p "$scenario_dir/documents/expenses/business/software"

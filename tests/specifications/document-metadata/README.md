@@ -155,8 +155,9 @@ A customer may pay two invoices in one bank transaction. Store both invoice PDFs
 and let each metadata file point to the same ledger posting group with its share
 of the total transaction amount. If each document is paid completely in the
 batch, set both the document amount and the cover amount to the invoice total. If
-a document is only partly paid, set top-level `amount` to the document total and
-`covers[].amount` to the paid part.
+a document is only partly paid, its cover amounts do not yet add up to the
+top-level document amount, so the amount audit reports the outstanding
+difference until covers for the remaining payments are added.
 
 Several invoice files can connect to the same required posting group.
 
@@ -257,15 +258,16 @@ Summary:
 ## Multiple Invoices On The Same Date
 
 Date-prefixed filenames only know account and date. If two required transactions
-share the same account and date, metadata removes the ambiguity by listing the
-amount that belongs to each file.
+share the same account and date, metadata can list the amount contributed by
+each file. The checker audits the files and transactions as one connected group;
+it does not attribute an individual file to an individual transaction.
 
 Metadata can resolve several invoices for the same account and date.
 
-### Two same-date invoices each cover one same-date transaction
+### Two same-date invoices cover one same-date transaction group
 
 ```scrut
-$ build_scenario scenario_two_same_date_invoices_each_cover_one_same_date_transaction
+$ build_scenario scenario_two_same_date_invoices_cover_one_same_date_transaction_group
 ```
 
 ```scrut
@@ -929,9 +931,6 @@ $ build_scenario scenario_metadata_notes_can_contain_arbitrary_text_or_structure
 ```scrut
 $ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
 
-Unexpected Files (1):
-  documents/expenses/business/software/2026-01-02-text-note.document.yml  [metadata file has no matching document PDF; use YYYY-MM-DD-missing.document.yml for missing documents]
-
 Summary:
   Coverage:
     1/1 transaction groups covered
@@ -941,7 +940,7 @@ Summary:
     0 unbooked documents
     0 overdue unbooked documents
     0 unmatched documents
-    1 unexpected files
+    0 unexpected files
     0 duplicate groups
     0 redundant metadata fields
     0 unresolvable cover metadata fields
@@ -955,5 +954,5 @@ Summary:
       0 transaction amount missing
       0 transaction currencies mixed
       0 document/transaction currency mismatch
-[1]
+OK.
 ```
