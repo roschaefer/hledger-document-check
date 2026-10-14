@@ -16,11 +16,9 @@ documents on disk.
 - `src/metadata.rs`: `.document.yml` sidecar parsing
 - `src/config.rs`: `hledger-document-check.toml` loading/writing
 - `src/model.rs`: shared types
-- `specs/`: Markdown specifications; fenced `gherkin` blocks are compiled into
-  cucumber features at build time by `build.rs`, via the shared
-  [markdown-to-cucumber](https://github.com/roschaefer/markdown-to-cucumber)
-  crate (see `tests/cucumber.rs` for step definitions, which stay local to
-  this crate)
+- `tests/specifications/`: executable Scrut specifications; each chapter
+  directory uses `README.md` for its document, with scenario inputs written
+  inline by the helpers in `readme-setup.sh`; `README.md` is a Scrut document too
 - `example/`: runnable example journal, documents, and Fava integration
 
 Keep real journals and documents outside this repository.
