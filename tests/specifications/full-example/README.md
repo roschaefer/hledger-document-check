@@ -6,8 +6,8 @@ invoices, due dates, amount auditing, and configuration.
 
 ## The example document check reports its complete state
 
-The checkout path in suggested commands is normalized so this transcript is
-stable across machines and temporary worktrees.
+The working directory in suggested commands is normalized so this transcript
+is stable across machines and temporary worktrees.
 
 <!--
 ```scrut {fail_fast: true, output_stream: combined}
@@ -22,7 +22,7 @@ $ build_scenario scenario_full_example
 ```
 
 ```scrut
-$ set -o pipefail; "$DOCUMENT_CHECK_BIN" check --documents example/documents --today 2026-05-20 | sed "s|$PWD|{checkout_dir}|g"
+$ hledger-document-check check --documents example/documents --today 2026-05-20 | sed "s|$PWD|{working_directory}|g"
 
 Missing Document Coverage (1):
   2026-04-10  AWS Invoice
@@ -40,9 +40,9 @@ Suggested Moves (1):
   2026-04-10  AWS Invoice
     account: Expenses:Business:Hosting:Aws
     amount: 12.34 EUR
-    mv {checkout_dir}/example/documents/Expenses/Business/Hosting/Aws/unbooked/invoice.pdf {checkout_dir}/example/documents/Expenses/Business/Hosting/Aws/2026-04-10-invoice.pdf
-    mv {checkout_dir}/example/documents/Expenses/Business/Hosting/Aws/unbooked/invoice.document.yml {checkout_dir}/example/documents/Expenses/Business/Hosting/Aws/2026-04-10-invoice.document.yml
-    mv {checkout_dir}/example/documents/Expenses/Business/Hosting/Aws/unbooked/invoice {checkout_dir}/example/documents/Expenses/Business/Hosting/Aws/2026-04-10-invoice
+    mv {working_directory}/example/documents/Expenses/Business/Hosting/Aws/unbooked/invoice.pdf {working_directory}/example/documents/Expenses/Business/Hosting/Aws/2026-04-10-invoice.pdf
+    mv {working_directory}/example/documents/Expenses/Business/Hosting/Aws/unbooked/invoice.document.yml {working_directory}/example/documents/Expenses/Business/Hosting/Aws/2026-04-10-invoice.document.yml
+    mv {working_directory}/example/documents/Expenses/Business/Hosting/Aws/unbooked/invoice {working_directory}/example/documents/Expenses/Business/Hosting/Aws/2026-04-10-invoice
 
 Amount Audit Skips (8):
   document/transaction currency mismatch

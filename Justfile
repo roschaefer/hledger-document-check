@@ -17,7 +17,7 @@ test:
 
 test-scrut:
     cargo build
-    DOCUMENT_CHECK_BIN="$(realpath "${CARGO_TARGET_DIR:-target}/debug/hledger-document-check")" scrut test tests/specifications
+    PATH="$(realpath "${CARGO_TARGET_DIR:-target}/debug"):$PATH" scrut test tests/specifications
 
 fmt:
     cargo fmt --all

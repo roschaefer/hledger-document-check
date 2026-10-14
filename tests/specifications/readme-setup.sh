@@ -1,5 +1,7 @@
 # shellcheck shell=bash
 
+set -o pipefail
+
 DOCUMENT_CHECK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export DOCUMENT_CHECK_ROOT
 

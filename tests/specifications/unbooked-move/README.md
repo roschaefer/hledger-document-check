@@ -21,8 +21,7 @@ $ build_scenario scenario_unbooked_move
 ```
 
 ```scrut
-$ set -o pipefail; "$DOCUMENT_CHECK_BIN" check --journal journal.journal --documents documents --today 2026-01-15 --ignore amount-audit-skips --ignore duplicate-files | sed "s|$PWD|{work_dir}|g"; \
-> status=${PIPESTATUS[0]}; echo "exit code: $status"; test "$status" -eq 1
+$ hledger-document-check check --journal journal.journal --documents documents --today 2026-01-15 --ignore amount-audit-skips --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
 
 Missing Document Coverage (1):
   2026-01-02  AWS Invoice
@@ -38,9 +37,9 @@ Suggested Moves (1):
   2026-01-02  AWS Invoice
     account: expenses:business:hosting:aws
     amount: 12.34 EUR
-    mv {work_dir}/documents/expenses/business/hosting/aws/unbooked/invoice.pdf {work_dir}/documents/expenses/business/hosting/aws/2026-01-02-invoice.pdf
-    mv {work_dir}/documents/expenses/business/hosting/aws/unbooked/invoice.document.yml {work_dir}/documents/expenses/business/hosting/aws/2026-01-02-invoice.document.yml
-    mv {work_dir}/documents/expenses/business/hosting/aws/unbooked/invoice {work_dir}/documents/expenses/business/hosting/aws/2026-01-02-invoice
+    mv {working_directory}/documents/expenses/business/hosting/aws/unbooked/invoice.pdf {working_directory}/documents/expenses/business/hosting/aws/2026-01-02-invoice.pdf
+    mv {working_directory}/documents/expenses/business/hosting/aws/unbooked/invoice.document.yml {working_directory}/documents/expenses/business/hosting/aws/2026-01-02-invoice.document.yml
+    mv {working_directory}/documents/expenses/business/hosting/aws/unbooked/invoice {working_directory}/documents/expenses/business/hosting/aws/2026-01-02-invoice
 
 Summary:
   Coverage:
@@ -65,5 +64,5 @@ Summary:
       0 transaction amount missing
       0 transaction currencies mixed
       0 document/transaction currency mismatch
-exit code: 1
+[1]
 ```
