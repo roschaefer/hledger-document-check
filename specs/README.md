@@ -21,3 +21,10 @@ Use:
 ```sh
 cargo test --test cucumber
 ```
+
+Scenarios migrated to direct Scrut transcripts live in
+[`tests/specifications/`](../tests/specifications/). Run them with:
+
+```sh
+just test-scrut
+```

@@ -21,6 +21,9 @@ documents on disk.
   [markdown-to-cucumber](https://github.com/roschaefer/markdown-to-cucumber)
   crate (see `tests/cucumber.rs` for step definitions, which stay local to
   this crate)
+- `tests/specifications/`: direct executable Scrut transcripts; each feature
+  directory has a reusable `setup.bash` and uses `README.md` when it contains
+  one document
 - `example/`: runnable example journal, documents, and Fava integration
 
 Keep real journals and documents outside this repository.

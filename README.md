@@ -218,6 +218,11 @@ Executable specifications in [`specs/`](./specs/) — run them with:
 cargo test --test cucumber
 ```
 
+Direct [Scrut](https://github.com/facebookincubator/scrut) end-to-end
+transcripts live in [`tests/specifications/`](./tests/specifications/). Inside
+the Nix development shell, run all tests with `just test-all`; use
+`just test-scrut` to run only those transcripts.
+
 Specs:
 
 - [Contract](./specs/01-contract.md)
@@ -232,8 +237,17 @@ Specs:
 
 ## Development
 
-Development requires a [Rust toolchain](https://rustup.rs/) and
-[`hledger`](https://hledger.org/).
+Enter the reproducible development shell, which includes Rust, `hledger`,
+Just, Scrut, and the linting tools:
+
+```bash
+nix develop
+```
+
+Alternatively, install a [Rust toolchain](https://rustup.rs/),
+[`hledger`](https://hledger.org/),
+[Just](https://github.com/casey/just), and
+[Scrut](https://github.com/facebookincubator/scrut) yourself.
 
 Clone the repository and build:
 

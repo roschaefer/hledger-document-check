@@ -101,76 +101,8 @@ Feature: Unbooked document without a unique match
       """
 ```
 
-```gherkin
-Feature: Unbooked document move suggestions
-  A unique unbooked document match produces an explicit rename suggestion.
-
-  Scenario: A matching transaction appears after an unbooked document was filed
-    Given a file named "journal.journal" with content:
-      """hledger
-      account assets:bank                         ; document_check:exempt
-      account expenses:business:hosting:aws       ; document_check:required
-
-      2026-01-02 AWS Invoice
-          expenses:business:hosting:aws   12.34 EUR
-          assets:bank                    -12.34 EUR
-      """
-    And a PDF file named "documents/expenses/business/hosting/aws/unbooked/invoice.pdf" with text:
-      """
-      Amount Due 12.34 EUR
-      """
-    And files named:
-      | path                                                                         | content              |
-      | documents/expenses/business/hosting/aws/unbooked/invoice.document.yml        | due_date: 2026-01-31 |
-      | documents/expenses/business/hosting/aws/unbooked/invoice/usage.csv           | line,item            |
-    When I run "hledger document-check check --journal journal.journal --documents documents --today 2026-01-15 --ignore amount-audit-skips --ignore duplicate-files"
-    Then the command exits with code 1
-    And stdout equals:
-      """text
-
-      Missing Document Coverage (1):
-        2026-01-02  AWS Invoice
-          account: expenses:business:hosting:aws
-          amount: 12.34 EUR
-
-      Unbooked Documents (1):
-        documents/expenses/business/hosting/aws/unbooked/invoice.pdf
-          amount: 12.34 EUR
-
-      Suggested Moves (1):
-        High-confidence unbooked document matches by account, amount, and currency.
-        2026-01-02  AWS Invoice
-          account: expenses:business:hosting:aws
-          amount: 12.34 EUR
-          mv {work_dir}/documents/expenses/business/hosting/aws/unbooked/invoice.pdf {work_dir}/documents/expenses/business/hosting/aws/2026-01-02-invoice.pdf
-          mv {work_dir}/documents/expenses/business/hosting/aws/unbooked/invoice.document.yml {work_dir}/documents/expenses/business/hosting/aws/2026-01-02-invoice.document.yml
-          mv {work_dir}/documents/expenses/business/hosting/aws/unbooked/invoice {work_dir}/documents/expenses/business/hosting/aws/2026-01-02-invoice
-
-      Summary:
-        Coverage:
-          0/1 transaction groups covered
-          0 missing-document placeholders
-        Open Items:
-          1 missing document coverage
-          1 unbooked documents
-          0 overdue unbooked documents
-          0 unmatched documents
-          0 unexpected files
-          0 duplicate groups
-          0 redundant metadata fields
-          0 unresolvable cover metadata fields
-        Amount Audit:
-          0 amount mismatches
-          0 linked groups checked
-          0 linked groups skipped
-          Skip Reasons:
-            0 document amount unreadable
-            0 document currencies unclear
-            0 transaction amount missing
-            0 transaction currencies mixed
-            0 document/transaction currency mismatch
-      """
-```
+The unique-match move behavior is exercised by the
+[unbooked-move Scrut transcript](../tests/specifications/unbooked-move/).
 
 ```gherkin
 Feature: Unbooked document move suggestions from metadata amounts
