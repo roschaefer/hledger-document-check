@@ -34,5 +34,5 @@ machete:
 audit:
     cargo audit
 
-check: fmt-check clippy machete audit test
+check: fmt-check clippy machete audit test test-scrut
 
