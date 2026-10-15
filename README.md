@@ -1,7 +1,7 @@
 # hledger-document-check
 
 <!--
-```scrut {fail_fast: true, output_stream: combined}
+```scrut {fail_fast: true}
 $ source "$TESTDIR/tests/specifications/readme-setup.sh" && new_scenario && checkout_example
 ```
 -->

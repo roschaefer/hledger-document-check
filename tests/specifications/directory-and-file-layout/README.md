@@ -1,7 +1,7 @@
 # Directory and File Layout
 
 <!--
-```scrut {fail_fast: true, output_stream: combined}
+```scrut {fail_fast: true}
 $ source "$TESTDIR/../readme-setup.sh"
 ```
 -->
