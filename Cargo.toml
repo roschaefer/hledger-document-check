@@ -11,7 +11,7 @@ path = "src/main.rs"
 anyhow = "1.0.104"
 chrono = { version = "0.4.45", features = ["serde"] }
 clap = { version = "4.6.7", features = ["derive"] }
-fancy-regex = "0.19.2"
+fancy-regex = "0.20.0"
 pdf-extract = "0.12.1"
 regex = "1.13.1"
 serde = { version = "1.0.229", features = ["derive"] }
