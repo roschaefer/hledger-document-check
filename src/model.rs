@@ -124,6 +124,23 @@ impl AmountMismatch {
     }
 }
 
+/// A document whose covers allocate less than its declared total: the covers
+/// record the payments booked so far and the remainder is still outstanding.
+#[derive(Debug, Clone)]
+pub struct PartialPayment {
+    pub document_path: PathBuf,
+    pub transaction_keys: Vec<(String, NaiveDate)>,
+    pub document_total: f64,
+    pub paid: f64,
+    pub currency: Option<String>,
+}
+
+impl PartialPayment {
+    pub fn outstanding(&self) -> f64 {
+        self.document_total - self.paid
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AmountAuditSkip {
     pub reason: String,
@@ -134,6 +151,7 @@ pub struct AmountAuditSkip {
 #[derive(Debug, Clone, Default)]
 pub struct AmountAudit {
     pub mismatches: Vec<AmountMismatch>,
+    pub partial_payments: Vec<PartialPayment>,
     pub skipped: Vec<AmountAuditSkip>,
     pub checked_groups: usize,
     pub skipped_missing_document_amount_groups: usize,
