@@ -6,8 +6,8 @@ use crate::amounts::document_amount_for_document;
 use crate::matching::matched_groups_for_entry;
 use crate::metadata::metadata_for_document;
 use crate::model::{
-    AmountAudit, AmountAuditSkip, AmountMismatch, DocumentEntry, DocumentKind, RequiredDocument,
-    MONEY_TOLERANCE,
+    AmountAudit, AmountAuditSkip, AmountMismatch, DocumentEntry, DocumentKind, PartialPayment,
+    RequiredDocument, MONEY_TOLERANCE,
 };
 
 type GroupKey = (String, NaiveDate);
@@ -90,6 +90,7 @@ pub fn find_amount_mismatches(
     let mut visited_files: HashSet<PathBuf> = HashSet::new();
     let mut visited_groups: HashSet<GroupKey> = HashSet::new();
     let mut mismatches: Vec<AmountMismatch> = Vec::new();
+    let mut partial_payments: Vec<PartialPayment> = Vec::new();
     let mut skipped: Vec<AmountAuditSkip> = Vec::new();
     let mut checked_groups = 0usize;
     let mut skipped_missing_document_amount_groups = 0usize;
@@ -275,7 +276,7 @@ pub fn find_amount_mismatches(
                 });
                 continue;
             }
-            let (declared_total_bits, _) = doc_totals.iter().next().unwrap();
+            let (declared_total_bits, declared_currency) = doc_totals.iter().next().unwrap();
             let declared_total = f64::from_bits(*declared_total_bits);
             let allocated_total: f64 = sorted_comp_groups
                 .iter()
@@ -288,7 +289,15 @@ pub fn find_amount_mismatches(
                 })
                 .sum();
 
-            if (allocated_total - declared_total).abs() > MONEY_TOLERANCE {
+            if declared_total - allocated_total > MONEY_TOLERANCE {
+                partial_payments.push(PartialPayment {
+                    document_path: fp.clone(),
+                    transaction_keys: sorted_comp_groups.clone(),
+                    document_total: declared_total,
+                    paid: allocated_total,
+                    currency: declared_currency.clone(),
+                });
+            } else if allocated_total - declared_total > MONEY_TOLERANCE {
                 mismatches.push(AmountMismatch {
                     document_paths: vec![fp.clone()],
                     transaction_keys: sorted_comp_groups.clone(),
@@ -368,6 +377,7 @@ pub fn find_amount_mismatches(
 
     AmountAudit {
         mismatches,
+        partial_payments,
         skipped,
         checked_groups,
         skipped_missing_document_amount_groups,
@@ -677,15 +687,17 @@ mod tests {
         assert_eq!(audit.checked_groups, 1);
     }
 
-    #[test]
-    fn document_total_mismatch_reported_for_split_cover_amounts() {
+    fn audit_split_covers(second_cover: f64) -> AmountAudit {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path().join("expenses/business/hosting/aws");
         std::fs::create_dir_all(&dir).unwrap();
         let invoice = dir.join("2026-01-01-invoice57.pdf");
         std::fs::write(&invoice, b"pdf").unwrap();
-        std::fs::write(dir.join("2026-01-01-invoice57.document.yml"),
-            "amount: 100.00\ncurrency: EUR\ncovers:\n  - date: 2026-01-01\n    account: expenses:business:hosting:aws\n    amount: 60.00\n  - date: 2026-02-01\n    account: expenses:business:hosting:aws\n    amount: 30.00\n").unwrap();
+        std::fs::write(
+            dir.join("2026-01-01-invoice57.document.yml"),
+            format!("amount: 100.00\ncurrency: EUR\ncovers:\n  - date: 2026-01-01\n    amount: 60.00\n  - date: 2026-02-01\n    amount: {second_cover}\n"),
+        )
+        .unwrap();
 
         let required_groups = HashMap::from([
             (
@@ -694,14 +706,41 @@ mod tests {
             ),
             (
                 group_key("expenses/business/hosting/aws", nd(2026, 2, 1)),
-                vec![make_required(ACCOUNT, nd(2026, 2, 1), 30.0)],
+                vec![make_required(ACCOUNT, nd(2026, 2, 1), second_cover)],
             ),
         ]);
         let entries = vec![make_entry(invoice, ACCOUNT, nd(2026, 1, 1))];
-        let audit = find_amount_mismatches(&required_groups, &entries);
+        find_amount_mismatches(&required_groups, &entries)
+    }
 
+    #[test]
+    fn covers_below_the_document_total_are_a_partial_payment() {
+        let audit = audit_split_covers(30.0);
+
+        assert!(audit.mismatches.is_empty());
+        assert_eq!(audit.partial_payments.len(), 1);
+        let partial = &audit.partial_payments[0];
+        assert!((partial.paid - 90.0).abs() < 0.001);
+        assert!((partial.document_total - 100.0).abs() < 0.001);
+        assert!((partial.outstanding() - 10.0).abs() < 0.001);
+        assert_eq!(partial.currency.as_deref(), Some("EUR"));
+    }
+
+    #[test]
+    fn covers_matching_the_document_total_are_fully_paid() {
+        let audit = audit_split_covers(40.0);
+
+        assert!(audit.mismatches.is_empty());
+        assert!(audit.partial_payments.is_empty());
+    }
+
+    #[test]
+    fn covers_above_the_document_total_are_a_mismatch() {
+        let audit = audit_split_covers(50.0);
+
+        assert!(audit.partial_payments.is_empty());
         assert_eq!(audit.mismatches.len(), 1);
-        assert!((audit.mismatches[0].document_total - 90.0).abs() < 0.001);
+        assert!((audit.mismatches[0].document_total - 110.0).abs() < 0.001);
         assert!((audit.mismatches[0].transaction_total - 100.0).abs() < 0.001);
     }
 }

@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
 use crate::amount_audit::find_amount_mismatches;
@@ -14,8 +14,9 @@ use crate::journal::{load_transactions, validate_document_duties};
 use crate::matching::GroupKey;
 use crate::metadata::metadata_for_document;
 use crate::model::{
-    AmountAuditSkip, AmountMismatch, DocumentEntry, DocumentKind, DuplicateFileGroup, PdfAmount,
-    RedundantMetadataField, RequiredDocument, TreeIssue, UnresolvableCover, MONEY_TOLERANCE,
+    AmountAuditSkip, AmountMismatch, DocumentEntry, DocumentKind, DuplicateFileGroup,
+    PartialPayment, PdfAmount, RedundantMetadataField, RequiredDocument, TreeIssue,
+    UnresolvableCover, MONEY_TOLERANCE,
 };
 use crate::redundancy::find_redundant_metadata;
 
@@ -27,6 +28,7 @@ pub const CHECK_UNMATCHED_DOCUMENTS: &str = "unmatched-documents";
 pub const CHECK_UNEXPECTED_FILES: &str = "unexpected-files";
 pub const CHECK_DUPLICATE_FILES: &str = "duplicate-files";
 pub const CHECK_AMOUNT_MISMATCHES: &str = "amount-mismatches";
+pub const CHECK_PARTIALLY_PAID_DOCUMENTS: &str = "partially-paid-documents";
 pub const CHECK_AMOUNT_AUDIT_SKIPS: &str = "amount-audit-skips";
 pub const CHECK_MISSING_DOCUMENT_PLACEHOLDERS: &str = "missing-document-placeholders";
 pub const CHECK_AMBIGUOUS_TRANSACTION_GROUPS: &str = "ambiguous-transaction-groups";
@@ -42,6 +44,7 @@ pub const ALL_CHECKS: &[&str] = &[
     CHECK_UNEXPECTED_FILES,
     CHECK_DUPLICATE_FILES,
     CHECK_AMOUNT_MISMATCHES,
+    CHECK_PARTIALLY_PAID_DOCUMENTS,
     CHECK_AMOUNT_AUDIT_SKIPS,
     CHECK_MISSING_DOCUMENT_PLACEHOLDERS,
     CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
@@ -76,6 +79,7 @@ fn build_check_policy(args: &CheckArgs) -> Result<HashMap<String, String>, Strin
     }
     for check in [
         CHECK_UNBOOKED_DOCUMENTS,
+        CHECK_PARTIALLY_PAID_DOCUMENTS,
         CHECK_AMBIGUOUS_TRANSACTION_GROUPS,
         CHECK_REDUNDANT_METADATA,
     ] {
@@ -143,6 +147,22 @@ fn format_pdf_amount(amount: Option<&PdfAmount>) -> String {
         None => "unknown".to_string(),
         Some(a) => format_amount(Some(a.amount), a.currency.as_deref()),
     }
+}
+
+/// Lists the distinct accounts and dates of a linked group, e.g.
+/// `income/customer @ 2026-01-05, 2026-02-05`.
+fn format_transaction_keys(keys: &[(String, NaiveDate)]) -> String {
+    let accounts: BTreeSet<&str> = keys.iter().map(|(account, _)| account.as_str()).collect();
+    let dates: BTreeSet<&NaiveDate> = keys.iter().map(|(_, date)| date).collect();
+    format!(
+        "{} @ {}",
+        accounts.into_iter().collect::<Vec<_>>().join(", "),
+        dates
+            .into_iter()
+            .map(|d| d.format("%Y-%m-%d").to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
 
 fn format_key(account: &str, date: &NaiveDate) -> String {
@@ -436,6 +456,10 @@ pub fn run_check(args: CheckArgs) -> i32 {
         print_amount_mismatches(&amount_audit.mismatches);
     }
 
+    if should_report(&policy, CHECK_PARTIALLY_PAID_DOCUMENTS) {
+        print_partial_payments(&amount_audit.partial_payments);
+    }
+
     if should_report(&policy, CHECK_AMOUNT_AUDIT_SKIPS) {
         print_amount_audit_skips(&amount_audit.skipped);
     }
@@ -466,6 +490,10 @@ pub fn run_check(args: CheckArgs) -> i32 {
     println!("    {} missing document coverage", missing.len());
     println!("    {} unbooked documents", unbooked_entries.len());
     println!("    {} overdue unbooked documents", overdue_unbooked.len());
+    println!(
+        "    {} partially paid documents",
+        amount_audit.partial_payments.len()
+    );
     println!("    {} unmatched documents", unmatched_entries.len());
     println!("    {} unexpected files", diff.documents.issues.len());
     println!("    {} duplicate groups", duplicate_files.len());
@@ -534,6 +562,11 @@ pub fn run_check(args: CheckArgs) -> i32 {
             &policy,
             CHECK_AMOUNT_MISMATCHES,
             !amount_audit.mismatches.is_empty(),
+        ),
+        is_failure(
+            &policy,
+            CHECK_PARTIALLY_PAID_DOCUMENTS,
+            !amount_audit.partial_payments.is_empty(),
         ),
         is_failure(
             &policy,
@@ -719,28 +752,6 @@ fn print_amount_mismatches(items: &[AmountMismatch]) {
     }
     println!("\nAmount Mismatches ({}):", items.len());
     for item in items {
-        let accounts: Vec<String> = {
-            let mut a: Vec<String> = item
-                .transaction_keys
-                .iter()
-                .map(|(acc, _)| acc.clone())
-                .collect::<HashSet<_>>()
-                .into_iter()
-                .collect();
-            a.sort();
-            a
-        };
-        let dates: Vec<String> = {
-            let mut d: Vec<String> = item
-                .transaction_keys
-                .iter()
-                .map(|(_, date)| date.format("%Y-%m-%d").to_string())
-                .collect::<HashSet<_>>()
-                .into_iter()
-                .collect();
-            d.sort();
-            d
-        };
         println!(
             "  {} {:.2} != {} {:.2}",
             item.document_label,
@@ -749,13 +760,36 @@ fn print_amount_mismatches(items: &[AmountMismatch]) {
             item.transaction_total
         );
         println!(
-            "    accounts/dates: {} @ {}",
-            accounts.join(", "),
-            dates.join(", ")
+            "    accounts/dates: {}",
+            format_transaction_keys(&item.transaction_keys)
         );
         for path in &item.document_paths {
             println!("    {}", display_path(path));
         }
+    }
+}
+
+fn print_partial_payments(items: &[PartialPayment]) {
+    if items.is_empty() {
+        return;
+    }
+    println!("\nPartially Paid Documents ({}):", items.len());
+    println!("  Covers allocate less than the declared document total; the rest is outstanding.");
+    for item in items {
+        println!("  {}", display_path(&item.document_path));
+        println!(
+            "    paid: {} of {}",
+            format_amount(Some(item.paid), item.currency.as_deref()),
+            format_amount(Some(item.document_total), item.currency.as_deref())
+        );
+        println!(
+            "    outstanding: {}",
+            format_amount(Some(item.outstanding()), item.currency.as_deref())
+        );
+        println!(
+            "    accounts/dates: {}",
+            format_transaction_keys(&item.transaction_keys)
+        );
     }
 }
 
@@ -865,32 +899,9 @@ fn print_amount_audit_skips(items: &[AmountAuditSkip]) {
             for path in &item.document_paths {
                 println!("    {}", display_path(path));
             }
-            let accounts: Vec<String> = {
-                let mut a: Vec<String> = item
-                    .transaction_keys
-                    .iter()
-                    .map(|(acc, _)| acc.clone())
-                    .collect::<HashSet<_>>()
-                    .into_iter()
-                    .collect();
-                a.sort();
-                a
-            };
-            let dates: Vec<String> = {
-                let mut d: Vec<String> = item
-                    .transaction_keys
-                    .iter()
-                    .map(|(_, date)| date.format("%Y-%m-%d").to_string())
-                    .collect::<HashSet<_>>()
-                    .into_iter()
-                    .collect();
-                d.sort();
-                d
-            };
             println!(
-                "      accounts/dates: {} @ {}",
-                accounts.join(", "),
-                dates.join(", ")
+                "      accounts/dates: {}",
+                format_transaction_keys(&item.transaction_keys)
             );
         }
     }

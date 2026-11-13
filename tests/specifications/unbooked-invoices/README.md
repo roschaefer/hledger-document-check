@@ -52,6 +52,7 @@ Summary:
     0 missing document coverage
     1 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -110,6 +111,7 @@ Summary:
     0 missing document coverage
     1 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -199,6 +201,7 @@ Summary:
     2 missing document coverage
     1 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -287,6 +290,7 @@ Summary:
     1 missing document coverage
     1 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -331,6 +335,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -419,6 +424,7 @@ Summary:
     1 missing document coverage
     1 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups

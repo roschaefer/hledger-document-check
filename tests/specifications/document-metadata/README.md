@@ -121,6 +121,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -139,7 +140,15 @@ Summary:
 OK.
 ```
 
-### Cover amounts must add up to the document total when total is configured
+## Partially Paid Invoices
+
+The top-level `amount` is the full document total, and each cover records one
+payment booked so far. While the covers add up to less than the document total,
+the document is partially paid: the check lists the paid and outstanding
+amounts under `partially-paid-documents`, which warns by default. Covers that
+add up to more than the document total are an amount mismatch.
+
+### A first rate leaves the rest of the invoice outstanding
 
 ```scrut
 $ new_scenario
@@ -152,10 +161,6 @@ $ write_file journal.journal <<'EOF'
 >
 > 2026-01-05 Customer Payment Rate 1
 >     assets:bank                                      60.00 EUR
->     income:business:freelance:customer
->
-> 2026-02-05 Customer Payment Rate 2
->     assets:bank                                      30.00 EUR
 >     income:business:freelance:customer
 > EOF
 ```
@@ -173,27 +178,92 @@ $ write_file documents/income/business/freelance/customer/customer-project.docum
 >
 > covers:
 >   - date: 2026-01-05
->     account: income:business:freelance:customer
 >     amount: 60.00
->   - date: 2026-02-05
->     account: income:business:freelance:customer
->     amount: 30.00
 > EOF
 ```
 
 ```scrut
 $ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
 
-Amount Mismatches (1):
-  allocated document amounts 90.00 != declared document total 100.00
-    accounts/dates: income/business/freelance/customer @ 2026-01-05, 2026-02-05
-    documents/income/business/freelance/customer/customer-project.pdf
+Partially Paid Documents (1):
+  Covers allocate less than the declared document total; the rest is outstanding.
+  documents/income/business/freelance/customer/customer-project.pdf
+    paid: 60.00 EUR of 100.00 EUR
+    outstanding: 40.00 EUR
+    accounts/dates: income/business/freelance/customer @ 2026-01-05
 
-Redundant Metadata Fields (2):
-  These fields already match what the file's location implies and can be removed.
-  documents/income/business/freelance/customer/customer-project.document.yml
-    covers[0] account: income:business:freelance:customer
-    covers[1] account: income:business:freelance:customer
+Summary:
+  Coverage:
+    1/1 transaction groups covered
+    0 missing-document placeholders
+  Open Items:
+    0 missing document coverage
+    0 unbooked documents
+    0 overdue unbooked documents
+    1 partially paid documents
+    0 unmatched documents
+    0 unexpected files
+    0 duplicate groups
+    0 redundant metadata fields
+    0 unresolvable cover metadata fields
+  Amount Audit:
+    0 amount mismatches
+    1 linked groups checked
+    0 linked groups skipped
+    Skip Reasons:
+      0 document amount unreadable
+      0 document currencies unclear
+      0 transaction amount missing
+      0 transaction currencies mixed
+      0 document/transaction currency mismatch
+OK.
+```
+
+### A later payment completes the invoice
+
+Once a cover for the remaining payment is added, the covers add up to the
+document total and the invoice is no longer listed.
+
+```scrut
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+>
+> 2026-01-05 Customer Payment Rate 1
+>     assets:bank                                      60.00 EUR
+>     income:business:freelance:customer
+>
+> 2026-02-05 Customer Payment Rate 2
+>     assets:bank                                      40.00 EUR
+>     income:business:freelance:customer
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.pdf <<'EOF'
+> customer project invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
+> amount: 100.00
+> currency: EUR
+>
+> covers:
+>   - date: 2026-01-05
+>     amount: 60.00
+>   - date: 2026-02-05
+>     amount: 40.00
+> EOF
+```
+
+```scrut
+$ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
 
 Summary:
   Coverage:
@@ -203,10 +273,86 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
-    2 redundant metadata fields
+    0 redundant metadata fields
+    0 unresolvable cover metadata fields
+  Amount Audit:
+    0 amount mismatches
+    1 linked groups checked
+    0 linked groups skipped
+    Skip Reasons:
+      0 document amount unreadable
+      0 document currencies unclear
+      0 transaction amount missing
+      0 transaction currencies mixed
+      0 document/transaction currency mismatch
+OK.
+```
+
+### Covers exceeding the document total are a mismatch
+
+```scrut
+$ new_scenario
+```
+
+```scrut
+$ write_file journal.journal <<'EOF'
+> account assets:bank                                  ; document_check:exempt
+> account income:business:freelance:customer           ; document_check:required
+>
+> 2026-01-05 Customer Payment Rate 1
+>     assets:bank                                      60.00 EUR
+>     income:business:freelance:customer
+>
+> 2026-02-05 Customer Payment Rate 2
+>     assets:bank                                      50.00 EUR
+>     income:business:freelance:customer
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.pdf <<'EOF'
+> customer project invoice
+> EOF
+```
+
+```scrut
+$ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
+> amount: 100.00
+> currency: EUR
+>
+> covers:
+>   - date: 2026-01-05
+>     amount: 60.00
+>   - date: 2026-02-05
+>     amount: 50.00
+> EOF
+```
+
+```scrut
+$ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
+
+Amount Mismatches (1):
+  allocated document amounts 110.00 != declared document total 100.00
+    accounts/dates: income/business/freelance/customer @ 2026-01-05, 2026-02-05
+    documents/income/business/freelance/customer/customer-project.pdf
+
+Summary:
+  Coverage:
+    2/2 transaction groups covered
+    0 missing-document placeholders
+  Open Items:
+    0 missing document coverage
+    0 unbooked documents
+    0 overdue unbooked documents
+    0 partially paid documents
+    0 unmatched documents
+    0 unexpected files
+    0 duplicate groups
+    0 redundant metadata fields
     0 unresolvable cover metadata fields
   Amount Audit:
     1 amount mismatches
@@ -227,9 +373,9 @@ A customer may pay two invoices in one bank transaction. Store both invoice PDFs
 and let each metadata file point to the same ledger posting group with its share
 of the total transaction amount. If each document is paid completely in the
 batch, set both the document amount and the cover amount to the invoice total. If
-a document is only partly paid, its cover amounts do not yet add up to the
-top-level document amount, so the amount audit reports the outstanding
-difference until covers for the remaining payments are added.
+a document is only partly paid, set the cover amount to the paid share; the
+document is listed as [partially paid](#partially-paid-invoices) until covers
+for the remaining payments are added.
 
 Several invoice files can connect to the same required posting group.
 
@@ -306,6 +452,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -403,6 +550,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -503,6 +651,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -589,6 +738,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -669,6 +819,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -736,6 +887,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -805,6 +957,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -864,6 +1017,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -961,6 +1115,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1027,6 +1182,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1092,6 +1248,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1158,6 +1315,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     1 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1227,6 +1385,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1288,6 +1447,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1356,6 +1516,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     1 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1423,6 +1584,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1493,6 +1655,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     1 unmatched documents
     1 unexpected files
     0 duplicate groups
@@ -1573,6 +1736,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1638,6 +1802,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     1 unexpected files
     0 duplicate groups

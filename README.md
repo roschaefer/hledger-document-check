@@ -134,6 +134,7 @@ Summary:
     1 missing document coverage
     2 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -294,6 +295,7 @@ Built-in check names:
 - `unexpected-files`
 - `duplicate-files`
 - `amount-mismatches`
+- `partially-paid-documents`
 - `amount-audit-skips`
 - `missing-document-placeholders`
 - `ambiguous-transaction-groups`
@@ -333,6 +335,7 @@ unmatched-documents = "fail"
 unexpected-files = "fail"
 duplicate-files = "fail"
 amount-mismatches = "fail"
+partially-paid-documents = "warn"
 amount-audit-skips = "ignore"
 missing-document-placeholders = "ignore"
 ambiguous-transaction-groups = "warn"
