@@ -774,7 +774,7 @@ fn print_partial_payments(items: &[PartialPayment]) {
         return;
     }
     println!("\nPartially Paid Documents ({}):", items.len());
-    println!("  Covers allocate less than the declared document total; the rest is outstanding.");
+    println!("  Covers record the payments so far; the declared rest is outstanding.");
     for item in items {
         println!("  {}", display_path(&item.document_path));
         println!(

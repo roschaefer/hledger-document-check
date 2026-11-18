@@ -24,6 +24,7 @@ pub fn find_amount_mismatches(
     // metadata_document_totals[file] = Set<(amount, currency)>
     let mut metadata_document_totals: HashMap<PathBuf, HashSet<(u64, Option<String>)>> =
         HashMap::new(); // store f64 as bits
+    let mut metadata_outstanding: HashMap<PathBuf, f64> = HashMap::new();
     let mut file_kinds: HashMap<PathBuf, HashSet<String>> = HashMap::new();
 
     for entry in matched_entries {
@@ -59,6 +60,9 @@ pub fn find_amount_mismatches(
         }
 
         if let Some(ref meta) = metadata {
+            if let Some(outstanding) = meta.outstanding {
+                metadata_outstanding.insert(real_path.clone(), outstanding);
+            }
             let entry_account = entry.account_path.to_string_lossy().into_owned();
             for cover in &meta.covers {
                 let Some(posting_date) = cover.posting_date else {
@@ -289,22 +293,30 @@ pub fn find_amount_mismatches(
                 })
                 .sum();
 
-            if declared_total - allocated_total > MONEY_TOLERANCE {
+            let outstanding = metadata_outstanding.get(fp).copied().unwrap_or(0.0);
+            let expected_paid = declared_total - outstanding;
+
+            if (allocated_total - expected_paid).abs() > MONEY_TOLERANCE {
+                let transaction_label = if outstanding > 0.0 {
+                    format!("declared document total {declared_total:.2} minus outstanding {outstanding:.2} =")
+                } else {
+                    "declared document total".to_string()
+                };
+                mismatches.push(AmountMismatch {
+                    document_paths: vec![fp.clone()],
+                    transaction_keys: sorted_comp_groups.clone(),
+                    document_total: allocated_total,
+                    transaction_total: expected_paid,
+                    document_label: "allocated document amounts".to_string(),
+                    transaction_label,
+                });
+            } else if outstanding > MONEY_TOLERANCE {
                 partial_payments.push(PartialPayment {
                     document_path: fp.clone(),
                     transaction_keys: sorted_comp_groups.clone(),
                     document_total: declared_total,
                     paid: allocated_total,
                     currency: declared_currency.clone(),
-                });
-            } else if allocated_total - declared_total > MONEY_TOLERANCE {
-                mismatches.push(AmountMismatch {
-                    document_paths: vec![fp.clone()],
-                    transaction_keys: sorted_comp_groups.clone(),
-                    document_total: allocated_total,
-                    transaction_total: declared_total,
-                    document_label: "allocated document amounts".to_string(),
-                    transaction_label: "declared document total".to_string(),
                 });
             }
         }
@@ -687,7 +699,7 @@ mod tests {
         assert_eq!(audit.checked_groups, 1);
     }
 
-    fn audit_split_covers(second_cover: f64) -> AmountAudit {
+    fn audit_split_covers(second_cover: f64, outstanding: Option<f64>) -> AmountAudit {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path().join("expenses/business/hosting/aws");
         std::fs::create_dir_all(&dir).unwrap();
@@ -695,7 +707,8 @@ mod tests {
         std::fs::write(&invoice, b"pdf").unwrap();
         std::fs::write(
             dir.join("2026-01-01-invoice57.document.yml"),
-            format!("amount: 100.00\ncurrency: EUR\ncovers:\n  - date: 2026-01-01\n    amount: 60.00\n  - date: 2026-02-01\n    amount: {second_cover}\n"),
+            format!("amount: 100.00\ncurrency: EUR\n{}covers:\n  - date: 2026-01-01\n    amount: 60.00\n  - date: 2026-02-01\n    amount: {second_cover}\n",
+                outstanding.map(|o| format!("outstanding: {o}\n")).unwrap_or_default()),
         )
         .unwrap();
 
@@ -714,8 +727,18 @@ mod tests {
     }
 
     #[test]
-    fn covers_below_the_document_total_are_a_partial_payment() {
-        let audit = audit_split_covers(30.0);
+    fn covers_below_the_document_total_without_outstanding_are_a_mismatch() {
+        let audit = audit_split_covers(30.0, None);
+
+        assert!(audit.partial_payments.is_empty());
+        assert_eq!(audit.mismatches.len(), 1);
+        assert!((audit.mismatches[0].document_total - 90.0).abs() < 0.001);
+        assert!((audit.mismatches[0].transaction_total - 100.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn covers_plus_declared_outstanding_matching_the_total_are_a_partial_payment() {
+        let audit = audit_split_covers(30.0, Some(10.0));
 
         assert!(audit.mismatches.is_empty());
         assert_eq!(audit.partial_payments.len(), 1);
@@ -727,8 +750,18 @@ mod tests {
     }
 
     #[test]
+    fn a_payment_beyond_the_declared_outstanding_is_a_mismatch() {
+        let audit = audit_split_covers(40.0, Some(10.0));
+
+        assert!(audit.partial_payments.is_empty());
+        assert_eq!(audit.mismatches.len(), 1);
+        assert!((audit.mismatches[0].document_total - 100.0).abs() < 0.001);
+        assert!((audit.mismatches[0].transaction_total - 90.0).abs() < 0.001);
+    }
+
+    #[test]
     fn covers_matching_the_document_total_are_fully_paid() {
-        let audit = audit_split_covers(40.0);
+        let audit = audit_split_covers(40.0, None);
 
         assert!(audit.mismatches.is_empty());
         assert!(audit.partial_payments.is_empty());
@@ -736,7 +769,7 @@ mod tests {
 
     #[test]
     fn covers_above_the_document_total_are_a_mismatch() {
-        let audit = audit_split_covers(50.0);
+        let audit = audit_split_covers(50.0, None);
 
         assert!(audit.partial_payments.is_empty());
         assert_eq!(audit.mismatches.len(), 1);

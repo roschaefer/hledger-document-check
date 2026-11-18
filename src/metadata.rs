@@ -65,6 +65,7 @@ const ALLOWED_TOP_LEVEL_KEYS: &[&str] = &[
     "document_type",
     "due_date",
     "notes",
+    "outstanding",
     "covers",
 ];
 
@@ -104,6 +105,7 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
                 amount: None,
                 currency: None,
                 due_date: None,
+                outstanding: None,
             });
         }
         serde_yaml::Value::Mapping(m) => m,
@@ -142,6 +144,17 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
     } else {
         None
     };
+
+    let outstanding = if let Some(v) = get("outstanding") {
+        parse_yaml_amount(v)?
+    } else {
+        None
+    };
+    if outstanding.is_some() && (top_level_amount.is_none() || get("covers").is_none()) {
+        return Err(DocumentMetadataError(
+            "outstanding requires a top-level amount and a covers list".into(),
+        ));
+    }
 
     // Build covers
     let mut covers: Vec<DocumentCover> = Vec::new();
@@ -215,6 +228,7 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
         amount: top_level_amount,
         currency: top_level_currency,
         due_date,
+        outstanding,
     })
 }
 
@@ -353,6 +367,32 @@ mod tests {
         assert_eq!(loaded.currency.as_deref(), Some("EUR"));
         assert_eq!(loaded.covers[0].amount, Some(60.0));
         assert_eq!(loaded.covers[0].currency.as_deref(), Some("EUR"));
+    }
+
+    #[test]
+    fn metadata_stores_declared_outstanding_amount() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().join("expenses/business/software");
+        std::fs::create_dir_all(&dir).unwrap();
+        let meta = write(&dir, "2026-01-01-suite.document.yml",
+            "amount: 100.00\noutstanding: 40.00\ncovers:\n  - date: 2026-01-01\n    amount: 60.00\n");
+        let loaded = load_document_metadata(&meta).unwrap();
+        assert_eq!(loaded.outstanding, Some(40.0));
+    }
+
+    #[test]
+    fn metadata_rejects_outstanding_without_amount_and_covers() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().join("expenses/business/software");
+        std::fs::create_dir_all(&dir).unwrap();
+        for text in [
+            "outstanding: 40.00\ncovers:\n  - date: 2026-01-01\n    amount: 60.00\n",
+            "amount: 100.00\noutstanding: 40.00\n",
+        ] {
+            let meta = write(&dir, "2026-01-01-suite.document.yml", text);
+            let err = load_document_metadata(&meta).unwrap_err();
+            assert!(err.0.contains("outstanding requires"), "{text}: {err}");
+        }
     }
 
     #[test]

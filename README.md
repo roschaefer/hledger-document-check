@@ -274,7 +274,8 @@ just test
 - Unbooked documents live in an account-local `unbooked/` subfolder.
 - Supporting files live in a sibling directory named after the document stem.
 - `*.document.yml` sidecars describe non-trivial relationships, due dates, and
-  amount metadata.
+  amount metadata, including an `outstanding` remainder for partially paid
+  documents.
 - `document_check:` account and posting tags decide which transactions require
   document coverage.
 - `hledger-document-check enrich-journal` emits a derived journal with `document:` tags for downstream

@@ -124,8 +124,8 @@ impl AmountMismatch {
     }
 }
 
-/// A document whose covers allocate less than its declared total: the covers
-/// record the payments booked so far and the remainder is still outstanding.
+/// A document whose covers record the payments booked so far, with the
+/// remainder of its declared total explicitly marked as `outstanding`.
 #[derive(Debug, Clone)]
 pub struct PartialPayment {
     pub document_path: PathBuf,
@@ -188,6 +188,7 @@ pub struct DocumentMetadata {
     pub amount: Option<f64>,
     pub currency: Option<String>,
     pub due_date: Option<NaiveDate>,
+    pub outstanding: Option<f64>,
 }
 
 #[derive(Debug, Default)]
