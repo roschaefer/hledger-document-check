@@ -140,169 +140,10 @@ Summary:
 OK.
 ```
 
-## Partially Paid Invoices
+### Cover amounts must add up to the document total when total is configured
 
-The top-level `amount` is the full document total, and each cover records one
-payment booked so far. A payment still to come is declared explicitly with
-`outstanding`, so that the covers plus `outstanding` add up to the document
-total. Such a document is partially paid: the check lists the paid and
-outstanding amounts under `partially-paid-documents`, which warns by default.
-
-Any shortfall that is not declared as `outstanding` is an amount mismatch, so
-a mistyped or forgotten cover still fails. Once a later payment is booked,
-`outstanding` has to be lowered or removed, otherwise the covers plus
-`outstanding` exceed the document total and the check fails again.
-
-### A first rate leaves the rest of the invoice outstanding
-
-```scrut
-$ new_scenario
-```
-
-```scrut
-$ write_file journal.journal <<'EOF'
-> account assets:bank                                  ; document_check:exempt
-> account income:business:freelance:customer           ; document_check:required
->
-> 2026-01-05 Customer Payment Rate 1
->     assets:bank                                      60.00 EUR
->     income:business:freelance:customer
-> EOF
-```
-
-```scrut
-$ write_file documents/income/business/freelance/customer/customer-project.pdf <<'EOF'
-> customer project invoice
-> EOF
-```
-
-```scrut
-$ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
-> amount: 100.00
-> currency: EUR
-> outstanding: 40.00
->
-> covers:
->   - date: 2026-01-05
->     amount: 60.00
-> EOF
-```
-
-```scrut
-$ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
-
-Partially Paid Documents (1):
-  Covers record the payments so far; the declared rest is outstanding.
-  documents/income/business/freelance/customer/customer-project.pdf
-    paid: 60.00 EUR of 100.00 EUR
-    outstanding: 40.00 EUR
-    accounts/dates: income/business/freelance/customer @ 2026-01-05
-
-Summary:
-  Coverage:
-    1/1 transaction groups covered
-    0 missing-document placeholders
-  Open Items:
-    0 missing document coverage
-    0 unbooked documents
-    0 overdue unbooked documents
-    1 partially paid documents
-    0 unmatched documents
-    0 unexpected files
-    0 duplicate groups
-    0 redundant metadata fields
-    0 unresolvable cover metadata fields
-  Amount Audit:
-    0 amount mismatches
-    1 linked groups checked
-    0 linked groups skipped
-    Skip Reasons:
-      0 document amount unreadable
-      0 document currencies unclear
-      0 transaction amount missing
-      0 transaction currencies mixed
-      0 document/transaction currency mismatch
-OK.
-```
-
-### An undeclared shortfall is a mismatch
-
-Without `outstanding`, covers adding up to less than the document total are
-not treated as a partial payment, because the gap may as well be a typo or a
-forgotten cover.
-
-```scrut
-$ new_scenario
-```
-
-```scrut
-$ write_file journal.journal <<'EOF'
-> account assets:bank                                  ; document_check:exempt
-> account income:business:freelance:customer           ; document_check:required
->
-> 2026-01-05 Customer Payment Rate 1
->     assets:bank                                      60.00 EUR
->     income:business:freelance:customer
-> EOF
-```
-
-```scrut
-$ write_file documents/income/business/freelance/customer/customer-project.pdf <<'EOF'
-> customer project invoice
-> EOF
-```
-
-```scrut
-$ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
-> amount: 100.00
-> currency: EUR
->
-> covers:
->   - date: 2026-01-05
->     amount: 60.00
-> EOF
-```
-
-```scrut
-$ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
-
-Amount Mismatches (1):
-  allocated document amounts 60.00 != declared document total 100.00
-    accounts/dates: income/business/freelance/customer @ 2026-01-05
-    documents/income/business/freelance/customer/customer-project.pdf
-
-Summary:
-  Coverage:
-    1/1 transaction groups covered
-    0 missing-document placeholders
-  Open Items:
-    0 missing document coverage
-    0 unbooked documents
-    0 overdue unbooked documents
-    0 partially paid documents
-    0 unmatched documents
-    0 unexpected files
-    0 duplicate groups
-    0 redundant metadata fields
-    0 unresolvable cover metadata fields
-  Amount Audit:
-    1 amount mismatches
-    1 linked groups checked
-    0 linked groups skipped
-    Skip Reasons:
-      0 document amount unreadable
-      0 document currencies unclear
-      0 transaction amount missing
-      0 transaction currencies mixed
-      0 document/transaction currency mismatch
-[1]
-```
-
-### A later payment must be reflected in `outstanding`
-
-When the next payment is booked but `outstanding` still declares the old
-remainder, the covers plus `outstanding` exceed the document total. The
-mismatch is the reminder to update or remove `outstanding`.
+Unless the rest is declared as [`outstanding`](../partial-payments/), covers
+adding up to less than the document total are an amount mismatch.
 
 ```scrut
 $ new_scenario
@@ -318,7 +159,7 @@ $ write_file journal.journal <<'EOF'
 >     income:business:freelance:customer
 >
 > 2026-02-05 Customer Payment Rate 2
->     assets:bank                                      40.00 EUR
+>     assets:bank                                      30.00 EUR
 >     income:business:freelance:customer
 > EOF
 ```
@@ -333,13 +174,14 @@ $ write_file documents/income/business/freelance/customer/customer-project.pdf <
 $ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
 > amount: 100.00
 > currency: EUR
-> outstanding: 40.00
 >
 > covers:
 >   - date: 2026-01-05
+>     account: income:business:freelance:customer
 >     amount: 60.00
 >   - date: 2026-02-05
->     amount: 40.00
+>     account: income:business:freelance:customer
+>     amount: 30.00
 > EOF
 ```
 
@@ -347,82 +189,15 @@ $ write_file documents/income/business/freelance/customer/customer-project.docum
 $ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
 
 Amount Mismatches (1):
-  allocated document amounts 100.00 != declared document total 100.00 minus outstanding 40.00 = 60.00
+  allocated document amounts 90.00 != declared document total 100.00
     accounts/dates: income/business/freelance/customer @ 2026-01-05, 2026-02-05
     documents/income/business/freelance/customer/customer-project.pdf
 
-Summary:
-  Coverage:
-    2/2 transaction groups covered
-    0 missing-document placeholders
-  Open Items:
-    0 missing document coverage
-    0 unbooked documents
-    0 overdue unbooked documents
-    0 partially paid documents
-    0 unmatched documents
-    0 unexpected files
-    0 duplicate groups
-    0 redundant metadata fields
-    0 unresolvable cover metadata fields
-  Amount Audit:
-    1 amount mismatches
-    1 linked groups checked
-    0 linked groups skipped
-    Skip Reasons:
-      0 document amount unreadable
-      0 document currencies unclear
-      0 transaction amount missing
-      0 transaction currencies mixed
-      0 document/transaction currency mismatch
-[1]
-```
-
-### A later payment completes the invoice
-
-Once a cover for the remaining payment is added and `outstanding` is removed,
-the covers add up to the document total and the invoice is no longer listed.
-
-```scrut
-$ new_scenario
-```
-
-```scrut
-$ write_file journal.journal <<'EOF'
-> account assets:bank                                  ; document_check:exempt
-> account income:business:freelance:customer           ; document_check:required
->
-> 2026-01-05 Customer Payment Rate 1
->     assets:bank                                      60.00 EUR
->     income:business:freelance:customer
->
-> 2026-02-05 Customer Payment Rate 2
->     assets:bank                                      40.00 EUR
->     income:business:freelance:customer
-> EOF
-```
-
-```scrut
-$ write_file documents/income/business/freelance/customer/customer-project.pdf <<'EOF'
-> customer project invoice
-> EOF
-```
-
-```scrut
-$ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
-> amount: 100.00
-> currency: EUR
->
-> covers:
->   - date: 2026-01-05
->     amount: 60.00
->   - date: 2026-02-05
->     amount: 40.00
-> EOF
-```
-
-```scrut
-$ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
+Redundant Metadata Fields (2):
+  These fields already match what the file's location implies and can be removed.
+  documents/income/business/freelance/customer/customer-project.document.yml
+    covers[0] account: income:business:freelance:customer
+    covers[1] account: income:business:freelance:customer
 
 Summary:
   Coverage:
@@ -436,82 +211,7 @@ Summary:
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
-    0 redundant metadata fields
-    0 unresolvable cover metadata fields
-  Amount Audit:
-    0 amount mismatches
-    1 linked groups checked
-    0 linked groups skipped
-    Skip Reasons:
-      0 document amount unreadable
-      0 document currencies unclear
-      0 transaction amount missing
-      0 transaction currencies mixed
-      0 document/transaction currency mismatch
-OK.
-```
-
-### Covers exceeding the document total are a mismatch
-
-```scrut
-$ new_scenario
-```
-
-```scrut
-$ write_file journal.journal <<'EOF'
-> account assets:bank                                  ; document_check:exempt
-> account income:business:freelance:customer           ; document_check:required
->
-> 2026-01-05 Customer Payment Rate 1
->     assets:bank                                      60.00 EUR
->     income:business:freelance:customer
->
-> 2026-02-05 Customer Payment Rate 2
->     assets:bank                                      50.00 EUR
->     income:business:freelance:customer
-> EOF
-```
-
-```scrut
-$ write_file documents/income/business/freelance/customer/customer-project.pdf <<'EOF'
-> customer project invoice
-> EOF
-```
-
-```scrut
-$ write_file documents/income/business/freelance/customer/customer-project.document.yml <<'EOF'
-> amount: 100.00
-> currency: EUR
->
-> covers:
->   - date: 2026-01-05
->     amount: 60.00
->   - date: 2026-02-05
->     amount: 50.00
-> EOF
-```
-
-```scrut
-$ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
-
-Amount Mismatches (1):
-  allocated document amounts 110.00 != declared document total 100.00
-    accounts/dates: income/business/freelance/customer @ 2026-01-05, 2026-02-05
-    documents/income/business/freelance/customer/customer-project.pdf
-
-Summary:
-  Coverage:
-    2/2 transaction groups covered
-    0 missing-document placeholders
-  Open Items:
-    0 missing document coverage
-    0 unbooked documents
-    0 overdue unbooked documents
-    0 partially paid documents
-    0 unmatched documents
-    0 unexpected files
-    0 duplicate groups
-    0 redundant metadata fields
+    2 redundant metadata fields
     0 unresolvable cover metadata fields
   Amount Audit:
     1 amount mismatches
@@ -533,9 +233,7 @@ and let each metadata file point to the same ledger posting group with its share
 of the total transaction amount. If each document is paid completely in the
 batch, set both the document amount and the cover amount to the invoice total. If
 a document is only partly paid, set the cover amount to the paid share and
-declare the rest as `outstanding`; the document is listed as
-[partially paid](#partially-paid-invoices) until covers for the remaining
-payments are added.
+declare the rest as [`outstanding`](../partial-payments/).
 
 Several invoice files can connect to the same required posting group.
 

@@ -233,6 +233,7 @@ Specs:
 - [Directory and file layout](./tests/specifications/directory-and-file-layout/)
 - [Special cases with `.document.yml`](./tests/specifications/document-metadata/)
 - [Amount audit](./tests/specifications/amount-audit/)
+- [Partial payments](./tests/specifications/partial-payments/)
 - [Unbooked invoices](./tests/specifications/unbooked-invoices/)
 - [Due date](./tests/specifications/due-date/)
 - [Enrich journal](./tests/specifications/enrich-journal/)
