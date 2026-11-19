@@ -134,6 +134,7 @@ Summary:
     1 missing document coverage
     2 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -232,6 +233,7 @@ Specs:
 - [Directory and file layout](./tests/specifications/directory-and-file-layout/)
 - [Special cases with `.document.yml`](./tests/specifications/document-metadata/)
 - [Amount audit](./tests/specifications/amount-audit/)
+- [Partial payments](./tests/specifications/partial-payments/)
 - [Unbooked invoices](./tests/specifications/unbooked-invoices/)
 - [Due date](./tests/specifications/due-date/)
 - [Enrich journal](./tests/specifications/enrich-journal/)
@@ -273,7 +275,8 @@ just test
 - Unbooked documents live in an account-local `unbooked/` subfolder.
 - Supporting files live in a sibling directory named after the document stem.
 - `*.document.yml` sidecars describe non-trivial relationships, due dates, and
-  amount metadata.
+  amount metadata, including an `outstanding` remainder for partially paid
+  documents.
 - `document_check:` account and posting tags decide which transactions require
   document coverage.
 - `hledger-document-check enrich-journal` emits a derived journal with `document:` tags for downstream
@@ -294,6 +297,7 @@ Built-in check names:
 - `unexpected-files`
 - `duplicate-files`
 - `amount-mismatches`
+- `partially-paid-documents`
 - `amount-audit-skips`
 - `missing-document-placeholders`
 - `ambiguous-transaction-groups`
@@ -333,6 +337,7 @@ unmatched-documents = "fail"
 unexpected-files = "fail"
 duplicate-files = "fail"
 amount-mismatches = "fail"
+partially-paid-documents = "warn"
 amount-audit-skips = "ignore"
 missing-document-placeholders = "ignore"
 ambiguous-transaction-groups = "warn"

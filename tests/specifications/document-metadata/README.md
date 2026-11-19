@@ -121,6 +121,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -140,6 +141,9 @@ OK.
 ```
 
 ### Cover amounts must add up to the document total when total is configured
+
+Unless the rest is declared as [`outstanding`](../partial-payments/), covers
+adding up to less than the document total are an amount mismatch.
 
 ```scrut
 $ new_scenario
@@ -203,6 +207,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -227,9 +232,8 @@ A customer may pay two invoices in one bank transaction. Store both invoice PDFs
 and let each metadata file point to the same ledger posting group with its share
 of the total transaction amount. If each document is paid completely in the
 batch, set both the document amount and the cover amount to the invoice total. If
-a document is only partly paid, its cover amounts do not yet add up to the
-top-level document amount, so the amount audit reports the outstanding
-difference until covers for the remaining payments are added.
+a document is only partly paid, set the cover amount to the paid share and
+declare the rest as [`outstanding`](../partial-payments/).
 
 Several invoice files can connect to the same required posting group.
 
@@ -306,6 +310,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -403,6 +408,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -503,6 +509,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -589,6 +596,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -669,6 +677,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -736,6 +745,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -805,6 +815,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -864,6 +875,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -961,6 +973,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1027,6 +1040,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1092,6 +1106,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1158,6 +1173,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     1 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1227,6 +1243,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1288,6 +1305,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1356,6 +1374,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     1 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1423,6 +1442,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1493,6 +1513,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     1 unmatched documents
     1 unexpected files
     0 duplicate groups
@@ -1573,6 +1594,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     0 unexpected files
     0 duplicate groups
@@ -1638,6 +1660,7 @@ Summary:
     0 missing document coverage
     0 unbooked documents
     0 overdue unbooked documents
+    0 partially paid documents
     0 unmatched documents
     1 unexpected files
     0 duplicate groups
