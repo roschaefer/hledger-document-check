@@ -119,6 +119,11 @@ Amount Audit Skips (8):
     example/documents/Expenses/Business/Mixed-transaction-currencies/2026-05-05-mixed.pdf
       accounts/dates: Expenses/Business/Mixed-transaction-currencies @ 2026-05-05
 
+Document Attribution:
+  Expenses/Business/Domains @ 2026-03-01
+    example/documents/Expenses/Business/Domains/2026-03-01-domain-a.pdf top-level -> transaction #12: Domain A
+    example/documents/Expenses/Business/Domains/2026-03-01-domain-b.pdf top-level -> transaction #13: Domain B
+
 Ambiguous Transaction Groups (1):
   Date-prefixed filenames can only match by account and date.
   These groups have multiple required transactions on the same date in the same account:

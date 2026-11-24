@@ -387,6 +387,63 @@ pub fn find_amount_mismatches(
         }
     }
 
+    let mut attributed: Vec<_> =
+        crate::matching::attributed_groups(required_groups, matched_entries)
+            .into_iter()
+            .collect();
+    attributed.sort_by(|a, b| a.0.cmp(&b.0));
+    for (key, covers) in attributed {
+        for attributed in covers {
+            let document_amount = attributed
+                .cover
+                .amount
+                .map(|amount| crate::model::PdfAmount {
+                    amount,
+                    currency: attributed.cover.currency.clone(),
+                })
+                .or_else(|| {
+                    let metadata = metadata_for_document(&attributed.entry.path)
+                        .ok()
+                        .flatten()?;
+                    (metadata.covers.len() == 1
+                        && attributed.entry.kind == DocumentKind::MatchedPdf)
+                        .then(|| document_amount_for_document(&attributed.entry.path))
+                        .flatten()
+                });
+            let (Some(document_amount), Some(transaction_amount), Some(transaction_currency)) = (
+                document_amount,
+                attributed.transaction.amount,
+                attributed.transaction.commodity.as_ref(),
+            ) else {
+                continue;
+            };
+            let Some(document_currency) = document_amount.currency else {
+                continue;
+            };
+            let document_amount = document_amount.amount;
+            if &document_currency == transaction_currency
+                && (document_amount - transaction_amount).abs() > MONEY_TOLERANCE
+            {
+                let mut mismatch = AmountMismatch::new(
+                    vec![attributed
+                        .entry
+                        .path
+                        .canonicalize()
+                        .unwrap_or(attributed.entry.path)],
+                    vec![key.clone()],
+                    document_amount,
+                    transaction_amount,
+                );
+                mismatch.document_label = format!("{} amount", attributed.cover.location);
+                mismatch.transaction_label = format!(
+                    "transaction #{} ({})",
+                    attributed.transaction.transaction_index, attributed.transaction.description
+                );
+                mismatches.push(mismatch);
+            }
+        }
+    }
+
     AmountAudit {
         mismatches,
         partial_payments,

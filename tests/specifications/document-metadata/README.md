@@ -16,7 +16,8 @@ entry can specify:
 - `account`: ledger account, written with `:` separators
 - `amount`: document amount allocated to that posting group
 - `currency`: currency for that amount
-- `description`: optional human description for the matched transaction
+- `description`: optional transaction description; for same-date attribution it must
+  match the hledger description, ignoring ASCII case and surrounding whitespace
 
 The top-level `amount` and `currency` describe the document itself. A
 `covers[].amount` value is the document amount allocated to the matched ledger
@@ -41,8 +42,9 @@ covers:
 
 When top-level `amount` is present, all cover amounts for that document must add
 up to it, otherwise the amount audit fails. When no top-level amount is present,
-the tool trusts the listed cover amounts and only compares the connected
-component against the ledger.
+the tool trusts the listed cover amounts and compares the connected component
+against the ledger. Uniquely attributed same-date covers are also audited
+individually, so offsetting errors cannot hide in a group total.
 
 For a metadata file that covers one transaction, the cover fields can also be
 written directly at the top level:
@@ -431,12 +433,17 @@ Summary:
 
 Date-prefixed filenames only know account and date. If two required transactions
 share the same account and date, metadata can list the amount contributed by
-each file. The checker audits the files and transactions as one connected group;
-it does not attribute an individual file to an individual transaction.
+each file. A unique one-to-one assignment of covers to transactions resolves
+individual documents using amounts and currencies, or explicit descriptions.
+Unique descriptions take precedence over amounts, so an amount error stays
+auditable. Repeated descriptions can still be distinguished by their amounts.
+Equal amounts without distinguishing descriptions remain ambiguous, even when
+the number of covers equals the number of transactions. More complex partial
+coverage remains grouped. See [attribution examples](same-date-attribution.md).
 
 Metadata can resolve several invoices for the same account and date.
 
-### Two same-date invoices cover one same-date transaction group
+### Two same-date invoices are attributed to individual transactions
 
 ```scrut
 $ new_scenario
@@ -491,6 +498,11 @@ $ write_file documents/expenses/business/domains/2026-03-01-domain-b.document.ym
 
 ```scrut
 $ hledger-document-check check --journal journal.journal --documents documents --ignore duplicate-files | sed "s|$PWD|{working_directory}|g"
+
+Document Attribution:
+  expenses/business/domains @ 2026-03-01
+    documents/expenses/business/domains/2026-03-01-domain-a.pdf covers[0] -> transaction #1: Domain A
+    documents/expenses/business/domains/2026-03-01-domain-b.pdf covers[0] -> transaction #2: Domain B
 
 Redundant Metadata Fields (4):
   These fields already match what the file's location implies and can be removed.

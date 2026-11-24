@@ -70,7 +70,6 @@ const ALLOWED_TOP_LEVEL_KEYS: &[&str] = &[
 ];
 
 const ALLOWED_COVER_KEYS: &[&str] = &["date", "account", "amount", "currency", "description"];
-// "description" remains allowed so existing metadata files don't break validation.
 
 fn validate_keys(
     mapping: &serde_yaml::Mapping,
@@ -197,6 +196,7 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
 
             covers.push(DocumentCover {
                 location: format!("covers[{i}]"),
+                description: get_c("description").and_then(yaml_to_string),
                 posting_date,
                 account_path,
                 amount,
@@ -215,6 +215,7 @@ pub fn load_document_metadata(path: &Path) -> Result<DocumentMetadata, DocumentM
             let account_path = top_level_account.as_deref().map(|a| a.replace(':', "/"));
             covers.push(DocumentCover {
                 location: "top-level".to_string(),
+                description: get("description").and_then(yaml_to_string),
                 posting_date,
                 account_path,
                 amount: top_level_amount,
