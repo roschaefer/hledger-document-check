@@ -465,6 +465,23 @@ pub fn run_check(args: CheckArgs) -> i32 {
     }
 
     if should_report(&policy, CHECK_AMBIGUOUS_TRANSACTION_GROUPS) {
+        let mut attributed: Vec<_> = diff.attributed_groups().into_iter().collect();
+        attributed.sort_by(|a, b| a.0.cmp(&b.0));
+        if !attributed.is_empty() {
+            println!("\nDocument Attribution:");
+            for ((account, date), covers) in attributed {
+                println!("  {}", format_key(&account, &date));
+                for cover in covers {
+                    println!(
+                        "    {} {} -> transaction #{}: {}",
+                        display_path(&cover.entry.path),
+                        cover.cover.location,
+                        cover.transaction.transaction_index,
+                        cover.transaction.description
+                    );
+                }
+            }
+        }
         print_ambiguous(&ambiguous_groups, required_groups);
     }
 

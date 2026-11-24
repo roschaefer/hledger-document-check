@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 use crate::document_tree::scan_document_tree;
 use crate::journal::iter_required_documents;
+use crate::matching::{attributed_groups, AttributedCover};
 use crate::matching::{matched_groups_for_entry, GroupKey};
-use crate::metadata::metadata_for_document;
 use crate::model::{DocumentEntry, DocumentKind, DocumentTree, RequiredDocument};
 
 pub struct JournalTree {
@@ -54,18 +54,24 @@ impl DocumentJournalDiff {
     }
 
     pub fn ambiguous_transaction_groups(&self) -> HashMap<GroupKey, usize> {
-        let metadata_cover_counts = metadata_cover_counts(&self.documents.matched_entries);
+        let attributed = self.attributed_groups();
         self.journal
             .required_groups
             .iter()
-            .filter(|(key, txns)| {
-                txns.len() > 1 && metadata_cover_counts.get(key).copied().unwrap_or(0) < txns.len()
-            })
+            .filter(|(key, txns)| txns.len() > 1 && !attributed.contains_key(*key))
             .map(|(key, txns)| (key.clone(), txns.len()))
             .collect()
     }
 
+    pub fn attributed_groups(&self) -> HashMap<GroupKey, Vec<AttributedCover>> {
+        attributed_groups(
+            &self.journal.required_groups,
+            &self.documents.matched_entries,
+        )
+    }
+
     pub fn documents_by_transaction_index(&self) -> HashMap<i64, Vec<PathBuf>> {
+        let attributed = self.attributed_groups();
         let mut docs_by_index: HashMap<i64, std::collections::HashSet<PathBuf>> = HashMap::new();
         for (entry, group_keys) in &self.matched_groups_by_entry {
             if entry.kind != DocumentKind::MatchedPdf {
@@ -74,6 +80,14 @@ impl DocumentJournalDiff {
             for group_key in group_keys {
                 if let Some(txns) = self.journal.required_groups.get(group_key) {
                     for txn in txns {
+                        if let Some(covers) = attributed.get(group_key) {
+                            if !covers.iter().any(|cover| {
+                                cover.entry == *entry
+                                    && cover.transaction.transaction_index == txn.transaction_index
+                            }) {
+                                continue;
+                            }
+                        }
                         let resolved = entry
                             .path
                             .canonicalize()
@@ -141,33 +155,6 @@ pub fn load_document_journal_diff(
     let journal = build_journal_tree(transactions, required_tag_prefixes);
     let documents = scan_document_tree(document_root);
     build_document_journal_diff(journal, documents)
-}
-
-fn metadata_cover_counts(entries: &[DocumentEntry]) -> HashMap<GroupKey, usize> {
-    let mut counts: HashMap<GroupKey, usize> = HashMap::new();
-    for entry in entries {
-        if !matches!(
-            entry.kind,
-            DocumentKind::MatchedPdf | DocumentKind::MissingMetadata
-        ) {
-            continue;
-        }
-        let Ok(Some(metadata)) = metadata_for_document(&entry.path) else {
-            continue;
-        };
-        let entry_account = entry.account_path.to_string_lossy().into_owned();
-        for cover in &metadata.covers {
-            let Some(posting_date) = cover.posting_date else {
-                continue;
-            };
-            let account = cover
-                .account_path
-                .clone()
-                .unwrap_or_else(|| entry_account.clone());
-            *counts.entry((account, posting_date)).or_insert(0) += 1;
-        }
-    }
-    counts
 }
 
 #[cfg(test)]

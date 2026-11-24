@@ -173,6 +173,7 @@ impl AmountAudit {
 
 #[derive(Debug, Clone)]
 pub struct DocumentCover {
+    pub description: Option<String>,
     /// Where this cover came from in the YAML: `"top-level"` for the
     /// shorthand form, or `"covers[N]"` for an explicit `covers:` list entry.
     pub location: String,
